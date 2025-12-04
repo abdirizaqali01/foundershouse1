@@ -1,0 +1,44 @@
+{
+  "name": "helsinki-3d-viewer",
+  "version": "1.0.0",
+  "description": "WebGL-based 3D visualization of Helsinki with custom pencil-sketch rendering effects",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "keywords": [
+    "threejs",
+    "webgl",
+    "3d",
+    "visualization",
+    "helsinki",
+    "glsl",
+    "shader"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@gsap/react": "^2.1.2",
+    "@types/three": "^0.181.0",
+    "3d-tiles-renderer": "^0.4.18",
+    "camera-controls": "^3.1.2",
+    "cesium": "^1.135.0",
+    "gsap": "^3.13.0",
+    "proj4": "^2.20.2",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "three": "^0.181.2"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "@types/proj4": "^2.5.6",
+    "@types/react": "^19.2.6",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.1",
+    "typescript": "^5.9.3",
+    "vite": "^7.2.4",
+    "vite-plugin-cesium": "^1.2.23"
+  }
+}

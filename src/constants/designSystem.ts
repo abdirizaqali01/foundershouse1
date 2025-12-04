@@ -1,0 +1,141 @@
+/**
+ * Design System - Colors, Typography, and Constants
+ * Centralized design tokens for the Helsinki 3D Viewer
+ */
+
+import * as THREE from 'three'
+
+// Color Palette
+export const COLORS = {
+  // Day Mode Colors
+  day: {
+    sky: 0xf0efe6,        // Light beige background
+    wireframe: 0x2b0a05,   // Dark brown wireframe
+  },
+
+  // Night Mode Colors
+  night: {
+    sky: 0x0a0a15,         // Dark night sky
+    wireframe: 0x4a4a52,   // Subtle gray wireframe
+    stars: 0xffffff,       // White stars
+    cityLights: 0xffcc66,  // Warm yellowish city lights
+    lightGlow: 0xffee88,   // Light glow spheres
+  },
+
+  // Chartogne-Taillet Palette (original inspiration)
+  chartogne: {
+    creamBg: 0xfdfcf5,
+    creamLight: 0xf9f6ee,
+    wineRed: 0xc23d2a,
+    black: 0x000000,
+    warmGray: 0x625e54,
+    darkGray: 0x464340,
+    midGray: 0xa0a095,
+  },
+} as const
+
+// Three.js Color Objects
+export const THREE_COLORS = {
+  day: {
+    sky: new THREE.Color(COLORS.day.sky),
+    wireframe: new THREE.Color(COLORS.day.wireframe),
+  },
+  night: {
+    sky: new THREE.Color(COLORS.night.sky),
+    wireframe: new THREE.Color(COLORS.night.wireframe),
+    stars: new THREE.Color(COLORS.night.stars),
+    cityLights: new THREE.Color(COLORS.night.cityLights),
+    lightGlow: new THREE.Color(COLORS.night.lightGlow),
+  },
+} as const
+
+// Material Opacity Values
+export const OPACITY = {
+  wireframe: {
+    day: 1.0,
+    night: 0.6,
+  },
+  stars: {
+    base: 0.8,
+    shimmerMin: 0.6,
+    shimmerMax: 0.8,
+  },
+  cityLights: {
+    sphere: 0.7,
+  },
+} as const
+
+// Scene Configuration
+export const SCENE_CONFIG = {
+  camera: {
+    fov: 60,
+    near: 1,
+    far: 100000,
+    initialPosition: { x: 0, y: 5000, z: 10000 },
+  },
+  lighting: {
+    ambient: {
+      color: 0xffffff,
+      intensity: 0.6,
+    },
+    directional: {
+      color: 0xffffff,
+      intensity: 0.8,
+      position: { x: 100, y: 500, z: 100 },
+      shadow: {
+        left: -10000,
+        right: 10000,
+        top: 10000,
+        bottom: -10000,
+      },
+    },
+    hemisphere: {
+      skyColor: 0xffffff,
+      groundColor: 0x444444,
+      intensity: 0.4,
+    },
+  },
+  stars: {
+    count: 5000,
+    radiusMin: 50000,
+    radiusMax: 70000,
+    size: 50,
+    rotationSpeed: 0.01,
+    shimmerSpeed: 2,
+  },
+  cityLights: {
+    color: COLORS.night.cityLights,
+    glowColor: COLORS.night.lightGlow,
+    sphereRadius: 5,
+    maxSphereRadius: 20, // For detection
+  },
+} as const
+
+// Time Configuration (Helsinki timezone)
+export const TIME_CONFIG = {
+  timezone: 'Europe/Helsinki',
+  dayStart: 8,  // 8:00 AM
+  dayEnd: 18,   // 6:00 PM (18:00)
+} as const
+
+// Helsinki Location
+export const HELSINKI_CENTER = {
+  lat: 60.1699,
+  lng: 24.9384,
+  radius: 2, // km
+} as const
+
+// Animation Constants
+export const ANIMATION = {
+  parallaxFactor: 0.2,
+  cameraHeightMultiplier: 1.2,
+  cameraDistanceMultiplier: 0.3,
+} as const
+
+// Post-Processing
+export const POST_PROCESS = {
+  renderTarget: {
+    width: window.innerWidth * window.devicePixelRatio,
+    height: window.innerHeight * window.devicePixelRatio,
+  },
+} as const

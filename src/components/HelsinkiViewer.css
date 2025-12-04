@@ -1,0 +1,202 @@
+/**
+ * Helsinki Viewer Styles
+ * Based on Chartogne-Taillet design system
+ */
+
+/* Container */
+.helsinki-container {
+  width: 100%;
+  height: 100vh;
+  position: absolute;
+  top: 0;
+  left: 0;
+  overflow: hidden;
+}
+
+/* UI Overlay */
+.ui-overlay {
+  position: fixed;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.ui-overlay > * {
+  pointer-events: auto;
+}
+
+/* Main CTA (Helsinki text) - Chartogne style */
+.main-cta {
+  position: fixed;
+  left: 3.125rem;
+  top: 3.125rem;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 14px;
+  letter-spacing: normal;
+  cursor: pointer;
+  display: flex;
+  gap: 0.2em;
+  color: #000;
+  transition: all 0.3s ease;
+}
+
+.main-cta span {
+  display: inline-block;
+  transition: transform 0.3s ease;
+}
+
+.main-cta:hover span {
+  transform: translateX(5px);
+}
+
+.main-cta:hover span:nth-child(1) { transition-delay: 0s; }
+.main-cta:hover span:nth-child(2) { transition-delay: 0.05s; }
+.main-cta:hover span:nth-child(3) { transition-delay: 0.1s; }
+.main-cta:hover span:nth-child(4) { transition-delay: 0.15s; }
+.main-cta:hover span:nth-child(5) { transition-delay: 0.2s; }
+.main-cta:hover span:nth-child(6) { transition-delay: 0.25s; }
+.main-cta:hover span:nth-child(7) { transition-delay: 0.3s; }
+.main-cta:hover span:nth-child(8) { transition-delay: 0.35s; }
+
+/* Controls */
+.controls {
+  position: fixed;
+  right: 3.125rem;
+  top: 3.125rem;
+  display: flex;
+  gap: 1rem;
+  background: rgba(253, 252, 245, 0.95);
+  padding: 1rem;
+  border-radius: 6px;
+}
+
+.controls button {
+  padding: 0.5rem 1rem;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 13px;
+  letter-spacing: 0.05em;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-radius: 4px;
+}
+
+.controls button:hover {
+  background: #f9f6ee;
+  transform: translateY(-1px);
+}
+
+.controls button:active {
+  transform: translateY(0);
+}
+
+/* Status */
+.status {
+  position: fixed;
+  left: 3.125rem;
+  bottom: 3.125rem;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 13px;
+  color: #464340;
+  background: rgba(253, 252, 245, 0.95);
+  padding: 0.75rem 1.25rem;
+  border-radius: 6px;
+  max-width: 360px;
+  white-space: pre-wrap;
+}
+
+/* Loading Overlay - Chartogne style */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #fdfcf5;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeOut 1s ease 2s forwards;
+}
+
+@keyframes fadeOut {
+  to {
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+.loading-content {
+  text-align: center;
+}
+
+.loading-title {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 5.5rem;
+  font-weight: 400;
+  letter-spacing: 0.05em;
+  color: #000;
+  margin: 0;
+  animation: letterReveal 2s ease forwards;
+}
+
+.loading-text {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 1rem;
+  letter-spacing: 0.15em;
+  color: #625e54;
+  margin-top: 1rem;
+  text-transform: uppercase;
+}
+
+.loading-bar {
+  width: 300px;
+  height: 2px;
+  background: rgba(0, 0, 0, 0.1);
+  margin: 2rem auto 0;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.loading-bar-fill {
+  height: 100%;
+  background: #000;
+  transition: width 0.3s ease;
+  border-radius: 2px;
+}
+
+@keyframes letterReveal {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Mobile responsive */
+@media (max-width: 767px) {
+  .main-cta {
+    left: 1.5rem;
+    top: 1.5rem;
+  }
+
+  .controls {
+    right: 1.5rem;
+    top: 1.5rem;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .status {
+    left: 1.5rem;
+    bottom: 1.5rem;
+  }
+
+  .loading-title {
+    font-size: 2.5rem;
+  }
+}

@@ -284,6 +284,13 @@ export function addCityLightsPoints(helsinkiModel: THREE.Group | null, count = 3
   group.visible = false
   helsinkiModel.add(group)
 
+  console.log('✅ City lights created successfully:', {
+    totalLights: count,
+    corePointsCount: positions.length / 3,
+    meshesProcessed: meshes.length,
+    visible: group.visible
+  })
+
   return group
 }
 

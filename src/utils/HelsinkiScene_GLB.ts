@@ -137,16 +137,20 @@ export class HelsinkiScene {
       onLoadComplete: config.onLoadComplete,
     }).then((model) => {
       this.helsinkiModel = model
+      console.log('✅ Helsinki model loaded successfully')
       // After the helsinkiModel reference is set, generate city lights if night mode
       if (this.isNightMode) {
+        console.log('🌙 Night mode active - adding city lights...')
         try {
           this.addCityLightsPoints(1200)
         } catch (e) {
-          // ignore
+          console.error('❌ Failed to add city lights:', e)
         }
+      } else {
+        console.log('☀️ Day mode - city lights not added')
       }
-    }).catch(() => {
-      // loading failed
+    }).catch((error) => {
+      console.error('❌ Helsinki model loading failed:', error)
     })
 
   // Expose scene for debugging and runtime controls
@@ -252,32 +256,9 @@ export class HelsinkiScene {
     // Update controls (pass delta for camera-controls; wrapper handles both)
     this.controls.update(delta)
 
-    // Reveal or hide city lights based on camera zoom and orientation so map looks "clean" when top-down
-    if (this.cityLights) {
-      // compute world center (prefer model center if available)
-      const center = new THREE.Vector3()
-      if (this.helsinkiModel) {
-        this.helsinkiModel.getWorldPosition(center)
-      }
-      const camDist = this.camera.position.distanceTo(center)
-
-      // Compute how "top-down" the view is. getWorldDirection returns the camera forward vector.
-      const dir = new THREE.Vector3()
-      this.camera.getWorldDirection(dir)
-      // When looking straight down, dir.y is near -1 (assuming Y-up). We want a positive measure where 1 = top-down.
-      const topDownness = -dir.y
-
-      // Tunable thresholds
-      const zoomThreshold = 8000 // when closer than this, reveal lights
-      const angleThreshold = 0.8 // when topDownness < this (i.e., not too top-down), reveal lights
-
-      const shouldShow = camDist < zoomThreshold || topDownness < angleThreshold
-      try {
-        this.cityLights.visible = shouldShow
-      } catch (e) {
-        // ignore if underlying object doesn't support visible
-      }
-    }
+    // City lights visibility is now controlled by toggleDayNightMode()
+    // They're always visible in night mode, always hidden in day mode
+    // No need for camera-based visibility logic anymore
 
     // Update background text with parallax effect
     if (this.backgroundText) {
@@ -392,7 +373,25 @@ export class HelsinkiScene {
       this.scene.add(this.stars)
     }
 
-    // Toggle city lights visibility (turn off during day)
+    // Toggle or create city lights
+    if (this.isNightMode) {
+      // If switching to night mode and city lights don't exist, create them
+      if (!this.cityLights && this.helsinkiModel) {
+        console.log('🌙 Creating city lights for night mode...')
+        this.addCityLightsPoints(1200)
+      }
+      // Make sure they're visible
+      if (this.cityLights) {
+        this.cityLights.visible = true
+      }
+    } else {
+      // Day mode - hide city lights
+      if (this.cityLights) {
+        this.cityLights.visible = false
+      }
+    }
+
+    // Also toggle any manual point lights that might exist
     this.scene.traverse((child) => {
       // Check if it's a point light (your manual city lights)
       if (child instanceof THREE.PointLight) {

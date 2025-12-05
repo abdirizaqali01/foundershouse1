@@ -5,6 +5,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { HelsinkiScene } from '../utils/HelsinkiScene_GLB'
+import type { RenderMode } from '../utils/modelLoader'
 import './HelsinkiViewer.css'
 
 export const HelsinkiViewer = () => {
@@ -17,6 +18,7 @@ export const HelsinkiViewer = () => {
   const [loadProgress, setLoadProgress] = useState<number>(0)
   const [isDemoNightMode, setIsDemoNightMode] = useState<boolean>(false)
   const [isAdvancedCamera, setIsAdvancedCamera] = useState<boolean>(false)
+  const [renderMode, setRenderMode] = useState<RenderMode>('textured')
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -88,9 +90,39 @@ export const HelsinkiViewer = () => {
     setStatus(ok ? 'Advanced camera enabled' : 'Using fallback OrbitControls')
   }
 
+  const handleRenderModeChange = (mode: RenderMode) => {
+    setRenderMode(mode)
+    setLoading(true)
+    // Reload scene with new render mode
+    if (sceneRef.current && containerRef.current) {
+      sceneRef.current.dispose()
+      sceneRef.current = null
+
+      const scene = new HelsinkiScene({
+        container: containerRef.current,
+        helsinkiCenter: { lat: 60.1699, lng: 24.9384 },
+        radius: 2,
+        renderMode: mode,
+        isNightMode: isDemoNightMode,
+        onLoadProgress: (progress) => {
+          setLoadProgress(progress)
+          setStatus(`Loading... ${progress.toFixed(1)}%`)
+        },
+        onLoadComplete: () => {
+          setLoading(false)
+          setStatus('Helsinki 3D - 2km radius')
+        },
+      })
+      sceneRef.current = scene
+    }
+  }
+
   return (
     <>
-      <div ref={containerRef} className="helsinki-container" />
+      <div
+        ref={containerRef}
+        className={`helsinki-container ${renderMode === 'textured-red' || renderMode === 'no-texture-red' ? 'red-filter' : ''}`}
+      />
 
       {/* UI Overlay - Chartogne style */}
       <div className="ui-overlay">
@@ -106,11 +138,21 @@ export const HelsinkiViewer = () => {
         </div>
 
         <div className="controls">
+          <div className="mode-selector">
+            <label>Render Mode:</label>
+            <select value={renderMode} onChange={(e) => handleRenderModeChange(e.target.value as RenderMode)}>
+              <option value="wireframe">Wireframe</option>
+              <option value="faint-buildings">Faint Buildings</option>
+              <option value="textured">Textured</option>
+              <option value="textured-red">Textured + Red Coat</option>
+              <option value="no-texture-red">Red Coat (No Textures)</option>
+            </select>
+          </div>
           <button onClick={handleToggleDayNight}>
-            {isDemoNightMode ? 'Switch to Day Mode' : 'Switch to Night Mode'}
+            {isDemoNightMode ? 'Day Mode' : 'Night Mode'}
           </button>
-          <button onClick={handleToggleAdvancedCamera} style={{ marginLeft: 8 }}>
-            {isAdvancedCamera ? 'Advanced Camera Enabled' : 'Enable Advanced Camera'}
+          <button onClick={handleToggleAdvancedCamera}>
+            {isAdvancedCamera ? 'Advanced Camera' : 'Basic Camera'}
           </button>
         </div>
 

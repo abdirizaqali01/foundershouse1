@@ -4,6 +4,58 @@
 import * as THREE from 'three'
 import { MeshSurfaceSampler } from 'three/examples/jsm/math/MeshSurfaceSampler.js'
 
+// Custom shader for per-point flickering
+const vertexShader = `
+  attribute float flickerState;
+  attribute vec3 customColor;
+  varying float vFlickerState;
+  varying vec3 vColor;
+
+  void main() {
+    vFlickerState = flickerState;
+    vColor = customColor;
+    vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+    gl_PointSize = 15.0 * (300.0 / -mvPosition.z);
+    gl_Position = projectionMatrix * mvPosition;
+  }
+`
+
+const fragmentShader = `
+  uniform sampler2D pointTexture;
+  varying float vFlickerState;
+  varying vec3 vColor;
+
+  void main() {
+    vec4 texColor = texture2D(pointTexture, gl_PointCoord);
+    float opacity = vFlickerState * texColor.a;
+    gl_FragColor = vec4(vColor, opacity);
+  }
+`
+
+const glowVertexShader = `
+  attribute float flickerState;
+  varying float vFlickerState;
+
+  void main() {
+    vFlickerState = flickerState;
+    vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+    gl_PointSize = 80.0 * (300.0 / -mvPosition.z);
+    gl_Position = projectionMatrix * mvPosition;
+  }
+`
+
+const glowFragmentShader = `
+  uniform sampler2D pointTexture;
+  uniform vec3 color;
+  varying float vFlickerState;
+
+  void main() {
+    vec4 texColor = texture2D(pointTexture, gl_PointCoord);
+    float opacity = vFlickerState * 0.6 * texColor.a;
+    gl_FragColor = vec4(color, opacity);
+  }
+`
+
 export function createLightSprite(color: number | string = 0xfff1c8) {
   const size = 64
   const canvas = document.createElement('canvas')
@@ -157,7 +209,7 @@ export function addCityLights(helsinkiModel: THREE.Group | null, count = 1000, c
   return inst
 }
 
-export function addCityLightsPoints(helsinkiModel: THREE.Group | null, count = 3000, color: number | string = 0xfff1c8, size = 12) {
+export function addCityLightsPoints(helsinkiModel: THREE.Group | null, count = 3000, color: number | string = 0xfff1c8) {
   if (!helsinkiModel) return null
 
   const meshes: THREE.Mesh[] = []
@@ -239,59 +291,301 @@ export function addCityLightsPoints(helsinkiModel: THREE.Group | null, count = 3
   const finalPositions = positions.slice(0, placed * 3)
   const finalColors = colors.slice(0, placed * 3)
 
+  // Initialize flicker state for each individual light
+  const flickerStates = new Float32Array(placed)
+  const nextFlickerTimes = new Float32Array(placed)
+  const flickerDurations = new Float32Array(placed)
+
+  // Initialize each light with random initial state
+  for (let i = 0; i < placed; i++) {
+    flickerStates[i] = 1.0 // Start on
+    nextFlickerTimes[i] = Math.random() * 15 // First flicker in 0-15 seconds (spread out!)
+    flickerDurations[i] = 0
+  }
+
   const coreGeom = new THREE.BufferGeometry()
   coreGeom.setAttribute('position', new THREE.Float32BufferAttribute(finalPositions, 3))
-  coreGeom.setAttribute('color', new THREE.Float32BufferAttribute(finalColors, 3))
+  coreGeom.setAttribute('customColor', new THREE.Float32BufferAttribute(finalColors, 3))
+  coreGeom.setAttribute('flickerState', new THREE.Float32BufferAttribute(flickerStates, 1))
 
-  const coreMaterial = new THREE.PointsMaterial({
-    size: Math.max(1, size * 0.25),
-    vertexColors: true,
+  const sprite = createLightSprite(color)
+
+  // Use custom shader material for per-point flickering
+  const coreMaterial = new THREE.ShaderMaterial({
+    uniforms: {
+      pointTexture: { value: sprite }
+    },
+    vertexShader: vertexShader,
+    fragmentShader: fragmentShader,
     transparent: true,
-    opacity: 1.0,
     depthWrite: false,
     depthTest: true,
     blending: THREE.AdditiveBlending,
-    sizeAttenuation: true,
   })
 
   const corePoints = new THREE.Points(coreGeom, coreMaterial)
   corePoints.frustumCulled = false
 
+  // Store flicker timing data on userData
+  corePoints.userData.nextFlickerTimes = nextFlickerTimes
+  corePoints.userData.flickerDurations = flickerDurations
+
+  // Glow layer with same shader approach
   const glowGeom = new THREE.BufferGeometry()
   glowGeom.setAttribute('position', new THREE.Float32BufferAttribute(finalPositions, 3))
-  glowGeom.setAttribute('color', new THREE.Float32BufferAttribute(finalColors, 3))
+  glowGeom.setAttribute('flickerState', new THREE.Float32BufferAttribute(flickerStates, 1))
 
-  const sprite = createLightSprite(color)
-  const glowMaterial = new THREE.PointsMaterial({
-    size: Math.max(4, size * 1.5),
-    map: sprite,
-    vertexColors: true,
+  const avgColor = new THREE.Color(color as any)
+  const glowMaterial = new THREE.ShaderMaterial({
+    uniforms: {
+      pointTexture: { value: sprite },
+      color: { value: avgColor }
+    },
+    vertexShader: glowVertexShader,
+    fragmentShader: glowFragmentShader,
     transparent: true,
-    opacity: 0.5,
     depthWrite: false,
     depthTest: false,
     blending: THREE.AdditiveBlending,
-    sizeAttenuation: true,
   })
 
   const glowPoints = new THREE.Points(glowGeom, glowMaterial)
   glowPoints.frustumCulled = false
+  glowPoints.userData.nextFlickerTimes = nextFlickerTimes
+  glowPoints.userData.flickerDurations = flickerDurations
 
   const group = new THREE.Group()
   group.add(corePoints)
   group.add(glowPoints)
+
   // start hidden — scene will reveal when user zooms in / changes orientation
   group.visible = false
   helsinkiModel.add(group)
 
   console.log('✅ City lights created successfully:', {
-    totalLights: count,
-    corePointsCount: positions.length / 3,
+    totalLights: placed,
     meshesProcessed: meshes.length,
     visible: group.visible
   })
 
   return group
+}
+
+/**
+ * Create street lights along edges of the model
+ * Analyzes edge geometry to find long paths and places lights along them
+ */
+export function addStreetLights(helsinkiModel: THREE.Group | null, spacing = 100, color: number | string = 0xfff5d4) {
+  if (!helsinkiModel) return null
+
+  const meshes: THREE.Mesh[] = []
+  helsinkiModel.traverse((child) => {
+    if (child instanceof THREE.Mesh && child.geometry) meshes.push(child as THREE.Mesh)
+  })
+  if (meshes.length === 0) return null
+
+  const streetLightPositions: THREE.Vector3[] = []
+
+  // Ensure model's world matrix is up to date
+  helsinkiModel.updateMatrixWorld(true)
+
+  // Process each mesh to find edges (optimized: sample every nth mesh for performance)
+  const meshSampleRate = meshes.length > 50 ? 2 : 1 // Skip every other mesh if scene is complex
+  meshes.forEach((mesh, meshIndex) => {
+    if (meshIndex % meshSampleRate !== 0) return // Skip meshes for performance
+
+    const geometry = mesh.geometry
+    const positionAttribute = geometry.getAttribute('position')
+    if (!positionAttribute) return
+
+    // Ensure mesh world matrix is updated
+    mesh.updateMatrixWorld(true)
+
+    // Get edges using EdgesGeometry (same as what we use for rendering)
+    const edges = new THREE.EdgesGeometry(geometry, 15)
+    const edgePositions = edges.getAttribute('position')
+
+    // Extract edge segments (pairs of points) - sample fewer edges for performance
+    const edgeSampleRate = edgePositions.count > 1000 ? 4 : 2 // Sample every 4th or 2nd edge
+    for (let i = 0; i < edgePositions.count; i += edgeSampleRate * 2) {
+      const start = new THREE.Vector3(
+        edgePositions.getX(i),
+        edgePositions.getY(i),
+        edgePositions.getZ(i)
+      )
+      const end = new THREE.Vector3(
+        edgePositions.getX(i + 1),
+        edgePositions.getY(i + 1),
+        edgePositions.getZ(i + 1)
+      )
+
+      // Apply mesh transformations
+      start.applyMatrix4(mesh.matrixWorld)
+      end.applyMatrix4(mesh.matrixWorld)
+
+      const length = start.distanceTo(end)
+
+      // Only place lights on edges that are reasonably long (likely streets)
+      // and roughly horizontal (Y difference small relative to XZ distance)
+      const yDiff = Math.abs(end.y - start.y)
+      const xzDist = Math.sqrt(Math.pow(end.x - start.x, 2) + Math.pow(end.z - start.z, 2))
+
+      // Filter: edge must be > 50 units long and relatively horizontal (street-like)
+      if (length > 50 && yDiff < length * 0.3 && xzDist > 40) {
+        // Place lights along this edge
+        const numLights = Math.floor(length / spacing)
+        for (let j = 0; j <= numLights; j++) {
+          const t = j / Math.max(numLights, 1)
+          const pos = new THREE.Vector3().lerpVectors(start, end, t)
+          // Lift lights slightly above ground
+          pos.y += 15
+          streetLightPositions.push(pos)
+        }
+      }
+    }
+
+    edges.dispose()
+  })
+
+  console.log(`🚦 Found ${streetLightPositions.length} street light positions`)
+
+  if (streetLightPositions.length === 0) {
+    console.warn('⚠️ No suitable street edges found - model may need manual street markers in Blender')
+    return null
+  }
+
+  // Create point lights visualization
+  const positions = new Float32Array(streetLightPositions.length * 3)
+  const flickerOffsets = new Float32Array(streetLightPositions.length)
+  const flickerSpeeds = new Float32Array(streetLightPositions.length)
+
+  streetLightPositions.forEach((pos, i) => {
+    positions[i * 3] = pos.x
+    positions[i * 3 + 1] = pos.y
+    positions[i * 3 + 2] = pos.z
+
+    // Random flicker attributes for each street light
+    flickerOffsets[i] = Math.random() * 100
+    flickerSpeeds[i] = 0.5 + Math.random() * 1.5
+  })
+
+  const group = new THREE.Group()
+  group.visible = false // Start hidden, will be shown in night mode
+
+  // Split street lights into multiple groups for independent flickering
+  const lightsPerGroup = 100 // Split into groups of 100 lights each
+  const totalLights = streetLightPositions.length
+
+  for (let groupStart = 0; groupStart < totalLights; groupStart += lightsPerGroup) {
+    const groupEnd = Math.min(groupStart + lightsPerGroup, totalLights)
+    const groupSize = groupEnd - groupStart
+
+    // Create positions for this group
+    const groupPositions = new Float32Array(groupSize * 3)
+    const groupFlickerOffsets = new Float32Array(groupSize)
+    const groupFlickerSpeeds = new Float32Array(groupSize)
+
+    for (let i = 0; i < groupSize; i++) {
+      const sourceIdx = groupStart + i
+      groupPositions[i * 3] = positions[sourceIdx * 3]
+      groupPositions[i * 3 + 1] = positions[sourceIdx * 3 + 1]
+      groupPositions[i * 3 + 2] = positions[sourceIdx * 3 + 2]
+      groupFlickerOffsets[i] = flickerOffsets[sourceIdx]
+      groupFlickerSpeeds[i] = flickerSpeeds[sourceIdx]
+    }
+
+    // Create geometry for this group
+    const groupGeometry = new THREE.BufferGeometry()
+    groupGeometry.setAttribute('position', new THREE.BufferAttribute(groupPositions, 3))
+    groupGeometry.setAttribute('flickerOffset', new THREE.BufferAttribute(groupFlickerOffsets, 1))
+    groupGeometry.setAttribute('flickerSpeed', new THREE.BufferAttribute(groupFlickerSpeeds, 1))
+
+    // Core bright lights for this group
+    const coreMaterial = new THREE.PointsMaterial({
+      color: new THREE.Color(color as any),
+      size: 18,
+      transparent: true,
+      opacity: 0.9,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    })
+
+    const corePoints = new THREE.Points(groupGeometry, coreMaterial)
+    corePoints.frustumCulled = false
+    group.add(corePoints)
+
+    // Glow layer for this group
+    const glowTexture = createLightSprite(color)
+    const glowMaterial = new THREE.PointsMaterial({
+      size: 80,
+      map: glowTexture,
+      transparent: true,
+      opacity: 0.6,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    })
+
+    const glowGeometry = groupGeometry.clone()
+    const glowPoints = new THREE.Points(glowGeometry, glowMaterial)
+    glowPoints.frustumCulled = false
+    group.add(glowPoints)
+  }
+
+  helsinkiModel.add(group)
+
+  console.log('✅ Street lights created successfully')
+
+  return group
+}
+
+/**
+ * Animate city lights with per-point discrete random flickering
+ * Optimized: only update lights that need state changes, skip unnecessary updates
+ */
+export function animateCityLights(cityLights: THREE.Object3D, elapsed: number) {
+  if (!cityLights) return
+
+  cityLights.traverse((child) => {
+    if (child instanceof THREE.Points) {
+      const geometry = child.geometry
+      const flickerStateAttr = geometry.getAttribute('flickerState')
+
+      if (!flickerStateAttr || !child.userData.nextFlickerTimes) return
+
+      const nextFlickerTimes = child.userData.nextFlickerTimes
+      const flickerDurations = child.userData.flickerDurations
+      const flickerStates = flickerStateAttr.array as Float32Array
+
+      let needsUpdate = false
+
+      // Only check/update lights that are due for a state change
+      // This significantly reduces CPU usage
+      for (let i = 0; i < flickerStates.length; i++) {
+        if (elapsed >= nextFlickerTimes[i]) {
+          needsUpdate = true
+
+          if (flickerStates[i] > 0.5) {
+            // Currently on - flicker off
+            flickerStates[i] = 0.2 + Math.random() * 0.2 // Dim to 20-40%
+            // Flicker lasts 0.05-0.3 seconds
+            flickerDurations[i] = 0.05 + Math.random() * 0.25
+            nextFlickerTimes[i] = elapsed + flickerDurations[i]
+          } else {
+            // Currently off - turn back on
+            flickerStates[i] = 1.0 // Full brightness
+            // Wait 2-12 seconds before next flicker (much longer, more subtle!)
+            const waitTime = 2.0 + Math.random() * 10.0
+            nextFlickerTimes[i] = elapsed + waitTime
+          }
+        }
+      }
+
+      // Only mark for update if something actually changed
+      if (needsUpdate) {
+        flickerStateAttr.needsUpdate = true
+      }
+    }
+  })
 }
 
 export function removeCityLights(cityLights: any) {

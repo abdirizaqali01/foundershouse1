@@ -68,5 +68,7 @@ void main() {
   // Add grain
   finalColor += grain;
 
+  // (no desaturation)
+
   gl_FragColor = vec4(finalColor, 1.0);
 }

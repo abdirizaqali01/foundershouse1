@@ -6,8 +6,9 @@
 
 import * as THREE from 'three'
 import { loadHelsinkiModel as loadModel } from './modelLoader'
+import type { RenderMode } from './modelLoader'
 import { setupPostProcessing, setupComposer } from './postProcessing'
-import { addCityLights, addCityLightsPoints, removeCityLights } from './cityLights'
+import { addCityLights, addCityLightsPoints, animateCityLights, removeCityLights } from './cityLights'
 import HelsinkiCameraController from './HelsinkiCameraController'
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js'
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js'
@@ -32,6 +33,8 @@ export interface SceneConfig {
   container: HTMLElement
   helsinkiCenter: { lat: number; lng: number }
   radius: number // km
+  renderMode?: RenderMode
+  isNightMode?: boolean
   onLoadProgress?: (progress: number) => void
   onLoadComplete?: () => void
 }
@@ -51,7 +54,7 @@ export class HelsinkiScene {
   private clock: THREE.Clock
   private container: HTMLElement
   private backgroundText: THREE.Mesh | null = null
-  private stars: THREE.Points | null = null
+  private stars: THREE.Group | THREE.Points | null = null
   private isNightMode: boolean
 
   // Animation state
@@ -63,7 +66,7 @@ export class HelsinkiScene {
     this.clock = new THREE.Clock()
 
   // Check if it's day or night in Helsinki (extracted to timeUtils)
-  this.isNightMode = isNightInHelsinki()
+  this.isNightMode = config.isNightMode !== undefined ? config.isNightMode : isNightInHelsinki()
 
     // Initialize scene
     this.scene = new THREE.Scene()
@@ -129,10 +132,12 @@ export class HelsinkiScene {
     // Load Helsinki GLB model (delegated to modelLoader)
     loadModel({
       modelPath: '/untitled.glb',
+      // modelPath: '/test.glb', // Test map - commented out
       scene: this.scene,
       camera: this.camera,
       controls: this.controls,
       isNightMode: this.isNightMode,
+      renderMode: config.renderMode || 'textured',
       onLoadProgress: config.onLoadProgress,
       onLoadComplete: config.onLoadComplete,
     }).then((model) => {
@@ -142,7 +147,7 @@ export class HelsinkiScene {
       if (this.isNightMode) {
         console.log('🌙 Night mode active - adding city lights...')
         try {
-          this.addCityLightsPoints(1200)
+          this.addCityLightsPoints(800) // Reduced from 1200 for better performance
         } catch (e) {
           console.error('❌ Failed to add city lights:', e)
         }
@@ -256,9 +261,10 @@ export class HelsinkiScene {
     // Update controls (pass delta for camera-controls; wrapper handles both)
     this.controls.update(delta)
 
-    // City lights visibility is now controlled by toggleDayNightMode()
-    // They're always visible in night mode, always hidden in day mode
-    // No need for camera-based visibility logic anymore
+    // Animate city lights with flickering effect
+    if (this.cityLights) {
+      animateCityLights(this.cityLights, elapsed)
+    }
 
     // Update background text with parallax effect
     if (this.backgroundText) {
@@ -335,6 +341,7 @@ export class HelsinkiScene {
     this.pencilStrength = Math.max(0, Math.min(1, strength))
   }
 
+
   // Toggle between day and night mode
   public toggleDayNightMode(forceNightMode: boolean) {
     this.isNightMode = forceNightMode
@@ -344,21 +351,25 @@ export class HelsinkiScene {
       ? new THREE.Color(0x0a0a15)  // Dark night sky
       : new THREE.Color(0xf0efe6)  // Light beige day sky
 
-    // Update wireframe colors
+    // Update edge line colors
     if (this.helsinkiModel) {
       this.helsinkiModel.traverse((child) => {
-        if (child instanceof THREE.Mesh && child.material instanceof THREE.MeshBasicMaterial) {
+        // Update LineSegments materials (the edge lines)
+        if (child instanceof THREE.LineSegments && child.material instanceof THREE.LineBasicMaterial) {
           if (this.isNightMode) {
-            // Night mode: subtle gray wireframe
+            // Night mode: subtle gray lines (very faint to avoid visual clutter)
             child.material.color.setHex(0x4a4a52)
             child.material.transparent = true
-            child.material.opacity = 0.6
+            child.material.opacity = 0.25
           } else {
-            // Day mode: dark brown wireframe
+            // Day mode: dark brown lines but still subtle
             child.material.color.setHex(0x2b0a05)
-            child.material.transparent = false
-            child.material.opacity = 1.0
+            child.material.transparent = true
+            child.material.opacity = 0.35
           }
+          // Keep depth test on and depth write off so overlapping lines don't accumulate visually
+          child.material.depthTest = true
+          child.material.depthWrite = false
           child.material.needsUpdate = true
         }
       })
@@ -444,10 +455,11 @@ export class HelsinkiScene {
     if (this.cityLights) this.cityLights.visible = enabled
   }
 
-  public addCityLightsPoints(count = 3000, color: number | string = 0xfff1c8, size = 12) {
+  public addCityLightsPoints(count = 3000, color: number | string = 0xfff1c8) {
     if (!this.helsinkiModel) return
     this.removeCityLights()
-    const group = addCityLightsPoints(this.helsinkiModel, count, color, size)
+    const group = addCityLightsPoints(this.helsinkiModel, count, color)
     if (group) this.cityLights = group as any
   }
+
 }

@@ -128,7 +128,7 @@ export class HelsinkiScene {
 
     // Load Helsinki GLB model (delegated to modelLoader)
     loadModel({
-      modelPath: '/untitled.glb',
+      modelPath: '/accurate_model.glb', //untitled.glb
       scene: this.scene,
       camera: this.camera,
       controls: this.controls,
@@ -245,6 +245,7 @@ export class HelsinkiScene {
         window.innerHeight * window.devicePixelRatio
       )
     }
+
   }
 
   
@@ -344,20 +345,32 @@ export class HelsinkiScene {
       ? new THREE.Color(0x0a0a15)  // Dark night sky
       : new THREE.Color(0xf0efe6)  // Light beige day sky
 
-    // Update wireframe colors
+    // Update mesh materials and wireframes
     if (this.helsinkiModel) {
       this.helsinkiModel.traverse((child) => {
+        // Update Mesh materials (solid base)
         if (child instanceof THREE.Mesh && child.material instanceof THREE.MeshBasicMaterial) {
           if (this.isNightMode) {
-            // Night mode: subtle gray wireframe
-            child.material.color.setHex(0x4a4a52)
+            // Night mode: darker gray
+            child.material.color.setHex(0x3a3a42)
             child.material.transparent = true
+            child.material.opacity = 0.8
+          } else {
+            // Day mode: light beige
+            child.material.color.setHex(0xe8e5d8)
+            child.material.transparent = true
+            child.material.opacity = 0.8
+          }
+          child.material.needsUpdate = true
+        }
+        // Update LineSegments (wireframe overlay)
+        if (child instanceof THREE.LineSegments && child.material instanceof THREE.LineBasicMaterial) {
+          if (this.isNightMode) {
+            child.material.color.setHex(0x4a4a52)
             child.material.opacity = 0.6
           } else {
-            // Day mode: dark brown wireframe
             child.material.color.setHex(0x2b0a05)
-            child.material.transparent = false
-            child.material.opacity = 1.0
+            child.material.opacity = 0.8
           }
           child.material.needsUpdate = true
         }

@@ -31,27 +31,47 @@ export async function loadHelsinkiModel(params: LoadParams): Promise<THREE.Group
       modelPath,
       (gltf) => {
         const model = gltf.scene
+        console.log('🔧 Model loaded, processing wireframes...')
 
-        // Ensure materials are visible and thin wireframe style depending on mode
+        // Apply solid material + wireframe overlay
+        let meshCount = 0
         model.traverse((child) => {
           if (child instanceof THREE.Mesh) {
-            if (isNightMode) {
-              child.material = new THREE.MeshBasicMaterial({
-                color: 0x4a4a52,
-                wireframe: true,
-                transparent: true,
-                opacity: 0.6,
-              })
-            } else {
-              child.material = new THREE.MeshBasicMaterial({
-                color: 0x2b0a05,
-                wireframe: true,
-              })
+            console.log('📐 Processing mesh:', child.name || 'unnamed')
+            
+            // Create light solid base material
+            child.material = new THREE.MeshBasicMaterial({
+              color: isNightMode ? 0x3a3a42 : 0xe8e5d8, // Light beige for day, darker gray for night
+              transparent: true,
+              opacity: isNightMode ? 0.8 : 0.8,
+            })
+            
+            // Add thin wireframe overlay
+            const edges = new THREE.EdgesGeometry(child.geometry)
+            const lineMaterial = new THREE.LineBasicMaterial({
+              color: isNightMode ? 0x4a4a52 : 0x2b0a05,
+              linewidth: 1,
+              transparent: true,
+              opacity: isNightMode ? 0.6 : 0.8,
+            })
+            
+            const wireframe = new THREE.LineSegments(edges, lineMaterial)
+            wireframe.position.copy(child.position)
+            wireframe.rotation.copy(child.rotation)
+            wireframe.scale.copy(child.scale)
+            wireframe.frustumCulled = false
+            
+            if (child.parent) {
+              child.parent.add(wireframe)
             }
+            
             child.visible = true
             child.frustumCulled = false
+            meshCount++
           }
         })
+        
+        console.log(`✅ Applied solid material + wireframes to ${meshCount} meshes`)
 
         // Compute bounding box and position model
         const box = new THREE.Box3().setFromObject(model)

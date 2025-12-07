@@ -11,12 +11,14 @@ export const COLORS = {
   day: {
     sky: 0xf0efe6,        // Light beige background
     wireframe: 0x2b0a05,   // Dark brown wireframe
+    wireframeOpacity: 0.35, // Day wireframe opacity
   },
 
   // Night Mode Colors
   night: {
     sky: 0x0a0a15,         // Dark night sky
     wireframe: 0x4a4a52,   // Subtle gray wireframe
+    wireframeOpacity: 0.25, // Night wireframe opacity (more subtle)
     stars: 0xffffff,       // White stars
     cityLights: 0xffcc66,  // Warm yellowish city lights
     lightGlow: 0xffee88,   // Light glow spheres
@@ -130,6 +132,26 @@ export const ANIMATION = {
   parallaxFactor: 0.2,
   cameraHeightMultiplier: 1.2,
   cameraDistanceMultiplier: 0.3,
+} as const
+
+// Fog Configuration
+export const FOG = {
+  near: 750,
+  far: 1750,
+  colors: {
+    day: 0xFFF8F2,
+    night: 0x0a0a15,
+  },
+} as const
+
+// City Lights Configuration
+export const CITY_LIGHTS = {
+  color: 0xfff1c8,  // Warm light color
+} as const
+
+// Typography / Fonts
+export const FONTS = {
+  backgroundText: 'https://threejs.org/examples/fonts/helvetiker_bold.typeface.json',
 } as const
 
 // Post-Processing

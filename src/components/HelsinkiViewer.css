@@ -3,6 +3,9 @@
  * Based on Chartogne-Taillet design system
  */
 
+/* Import IBM Plex Sans for the intro typography */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@600;700&display=swap');
+
 /* Container */
 .helsinki-container {
   width: 100%;
@@ -29,38 +32,28 @@
   pointer-events: auto;
 }
 
-/* Main CTA (Helsinki text) - Chartogne style */
+/* Main CTA (FH Logo) - Chartogne style */
 .main-cta {
   position: fixed;
   left: 3.125rem;
   top: 3.125rem;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  font-size: 14px;
-  letter-spacing: normal;
   cursor: pointer;
   display: flex;
-  gap: 0.2em;
-  color: #000;
   transition: all 0.3s ease;
 }
 
-.main-cta span {
-  display: inline-block;
-  transition: transform 0.3s ease;
+.main-cta:hover {
+  opacity: 0.7;
+  transform: scale(1.05);
 }
 
-.main-cta:hover span {
-  transform: translateX(5px);
+/* FH Logo */
+.main-cta .fh-logo {
+  height: 50px;
+  width: auto;
+  display: block;
+  transition: all 0.3s ease;
 }
-
-.main-cta:hover span:nth-child(1) { transition-delay: 0s; }
-.main-cta:hover span:nth-child(2) { transition-delay: 0.05s; }
-.main-cta:hover span:nth-child(3) { transition-delay: 0.1s; }
-.main-cta:hover span:nth-child(4) { transition-delay: 0.15s; }
-.main-cta:hover span:nth-child(5) { transition-delay: 0.2s; }
-.main-cta:hover span:nth-child(6) { transition-delay: 0.25s; }
-.main-cta:hover span:nth-child(7) { transition-delay: 0.3s; }
-.main-cta:hover span:nth-child(8) { transition-delay: 0.35s; }
 
 /* Controls */
 .controls {
@@ -148,69 +141,41 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: #fdfcf5;
+  background: #FFF8F2;
   z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
-  animation: fadeOut 1s ease 2s forwards;
-}
-
-@keyframes fadeOut {
-  to {
-    opacity: 0;
-    pointer-events: none;
-  }
 }
 
 .loading-content {
-  text-align: center;
+  width: 90%;
+  max-width: 1200px;
+  position: relative;
+  padding: 4rem 6rem;
 }
 
 .loading-title {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  font-size: 5.5rem;
-  font-weight: 400;
-  letter-spacing: 0.05em;
-  color: #000;
+  font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 105.28px; /* 112px reduced by 6% */
+  line-height: 1.02;
+  font-weight: 600; /* semi-bold */
+  letter-spacing: -0.01em;
+  color: #e21a11; /* bold brand red */
   margin: 0;
-  animation: letterReveal 2s ease forwards;
+  text-align: left;
 }
 
-.loading-text {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  font-size: 1rem;
-  letter-spacing: 0.15em;
-  color: #625e54;
+.loading-ticker {
+  display: block;
+  width: 100%;
+  text-align: right; /* place the ticker to the furthest right of the text container */
   margin-top: 1rem;
-  text-transform: uppercase;
-}
-
-.loading-bar {
-  width: 300px;
-  height: 2px;
-  background: rgba(0, 0, 0, 0.1);
-  margin: 2rem auto 0;
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.loading-bar-fill {
-  height: 100%;
-  background: #000;
-  transition: width 0.3s ease;
-  border-radius: 2px;
-}
-
-@keyframes letterReveal {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 45.12px; /* 48px reduced by 6% */
+  font-weight: 600;
+  color: #575552;
+  font-variant-numeric: tabular-nums; /* fixed-width numbers to prevent layout shift */
 }
 
 /* Mobile responsive */

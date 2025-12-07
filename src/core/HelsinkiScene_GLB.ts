@@ -5,29 +5,15 @@
  */
 
 import * as THREE from 'three'
-import { loadHelsinkiModel as loadModel } from './modelLoader'
-import type { RenderMode } from './modelLoader'
-import { setupPostProcessing, setupComposer } from './postProcessing'
-import { addCityLights, addCityLightsPoints, animateCityLights, removeCityLights } from './cityLights'
-import HelsinkiCameraController from './HelsinkiCameraController'
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js'
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js'
-import { PerlinNoiseGenerator } from './perlinNoise'
-import { isNightInHelsinki } from './timeUtils'
-import { createStarfield, animateStars } from './stars'
-import { setupSceneLighting } from './lighting'
-// post-processing and loaders moved to utilities
-
-// Chartogne-Taillet color palette
-export const COLORS = {
-  creamBg: new THREE.Color(0xfdfcf5),
-  creamLight: new THREE.Color(0xf9f6ee),
-  wineRed: new THREE.Color(0xc23d2a),
-  black: new THREE.Color(0x000000),
-  warmGray: new THREE.Color(0x625e54),
-  darkGray: new THREE.Color(0x464340),
-  midGray: new THREE.Color(0xa0a095),
-}
+import HelsinkiCameraController from './HelsinkiCameraController'
+import { loadHelsinkiModel as loadModel, type RenderMode } from '../loaders'
+import { setupPostProcessing, setupComposer, setupSceneLighting } from '../rendering'
+import { addCityLights, addCityLightsPoints, animateCityLights, removeCityLights, updateCityLightsFog, createStarfield, animateStars, setupSceneFog, updateFogColor } from '../effects'
+import { createCinematicAnimation, updateCinematicAnimation, getAnimationProgress, cinematicEaseOut, type CinematicAnimationState, createIdleRotation, updateIdleRotation, type IdleRotationState } from '../animation'
+import { PerlinNoiseGenerator, isNightInHelsinki, updateMaterialsInHierarchy, isLineSegmentsWithBasicMaterial } from '../helpers'
+import { COLORS, FOG, FONTS, CITY_LIGHTS } from '../constants/designSystem'
 
 export interface SceneConfig {
   container: HTMLElement
@@ -56,6 +42,9 @@ export class HelsinkiScene {
   private backgroundText: THREE.Mesh | null = null
   private stars: THREE.Group | THREE.Points | null = null
   private isNightMode: boolean
+  private cinematicAnimation: CinematicAnimationState | null = null
+  private idleRotation: IdleRotationState | null = null
+  private fog: THREE.Fog | null = null
 
   // Animation state
   public revealProgress: number = 0
@@ -71,8 +60,8 @@ export class HelsinkiScene {
     // Initialize scene
     this.scene = new THREE.Scene()
     this.scene.background = this.isNightMode
-      ? new THREE.Color(0x0a0a15)  // Dark night sky
-      : new THREE.Color(0xf0efe6)  // Light beige day sky
+      ? new THREE.Color(COLORS.night.sky)  // Dark night sky
+      : new THREE.Color(COLORS.day.sky)  // Light beige day sky
 
     // Setup camera
     this.camera = new THREE.PerspectiveCamera(
@@ -119,6 +108,13 @@ export class HelsinkiScene {
 
   // Lighting (moved to lighting utility)
   setupSceneLighting(this.scene)
+
+    // Setup fog (but disable it initially during cinematic)
+    this.fog = setupSceneFog(this.scene, this.isNightMode)
+    // Disable fog initially - will enable after cinematic
+    if (this.fog) {
+      this.scene.fog = null
+    }
 
     // Add starfield only for night mode (stars util)
     if (this.isNightMode) {
@@ -187,10 +183,9 @@ export class HelsinkiScene {
 
     const loader = new FontLoader()
 
-    // Load IBM Plex Sans font (we'll use a similar font from Three.js examples)
-    // Three.js includes some built-in fonts, or we can use a web font
+    // Load font for background text
     loader.load(
-      'https://threejs.org/examples/fonts/helvetiker_bold.typeface.json',
+      FONTS.backgroundText,
       (font) => {
         const textGeometry = new TextGeometry('TOP 0.1%', {
           font: font,
@@ -206,9 +201,10 @@ export class HelsinkiScene {
         textGeometry.translate(-textWidth / 2, 0, 0)
 
         const textMaterial = new THREE.MeshBasicMaterial({
-          color: 0x2b0a05, // Dark brown color
+          color: COLORS.day.wireframe, // Dark brown color
           transparent: true,
           opacity: 0.15, // Subtle opacity so it stays in background
+          fog: false, // Background text should not be affected by fog
         })
 
         this.backgroundText = new THREE.Mesh(textGeometry, textMaterial)
@@ -258,12 +254,93 @@ export class HelsinkiScene {
     const elapsed = this.clock.getElapsedTime()
     const delta = this.clock.getDelta()
 
+    // Update cinematic animation if playing
+    if (this.cinematicAnimation && this.cinematicAnimation.isPlaying) {
+      const progress = getAnimationProgress(this.cinematicAnimation, elapsed)
+      
+      // Start idle rotation 1 second before end (at 4 seconds of 5 second animation = 80%)
+      // The slow rotation speed matches the cinematic's deceleration perfectly
+      if (progress >= 0.80 && !this.idleRotation) {
+        const mapCenter = new THREE.Vector3(0, 0, 0)
+        this.idleRotation = createIdleRotation(this.camera, mapCenter, elapsed)
+        console.log('🔄 Idle rotation started 1 second before end - invisible blend')
+      }
+      
+      // Continue cinematic animation until idle rotation takes over
+      // Stop cinematic once we're past 98% to hand control to idle rotation
+      if (progress < 0.98) {
+        const stillPlaying = updateCinematicAnimation(
+          this.cinematicAnimation,
+          this.camera,
+          this.controls,
+          elapsed,
+          delta
+        )
+        
+        // If animation stopped naturally, mark as not playing
+        if (!stillPlaying) {
+          this.cinematicAnimation.isPlaying = false
+          console.log('✅ Cinematic animation complete')
+        }
+      } else {
+        // At 98%, hand off to idle rotation completely
+        this.cinematicAnimation.isPlaying = false
+        console.log('✅ Cinematic handoff to idle at 98%')
+        
+        // Ensure fog is at final values
+        if (this.fog) {
+          this.fog.near = FOG.near
+          this.fog.far = FOG.far
+          this.scene.fog = this.fog
+          console.log('🌫️ Fog fully enabled')
+        }
+      }
+      
+      // Gradually fade in fog using the same cinematic easing as the camera animation
+      if (this.fog) {
+        // Apply the same cinematic ease-out curve to fog for synchronized animation
+        const easedProgress = cinematicEaseOut(progress)
+        
+        // Interpolate fog distances from very far (no fog) to normal distances
+        const finalNear = FOG.near
+        const finalFar = FOG.far
+        const startNear = 50000
+        const startFar = 100000
+        
+        this.fog.near = startNear + (finalNear - startNear) * easedProgress
+        this.fog.far = startFar + (finalFar - startFar) * easedProgress
+        
+        // Make sure fog is attached to scene
+        if (this.scene.fog !== this.fog) {
+          this.scene.fog = this.fog
+        }
+      }
+    }
+
+    // Update idle rotation if active
+    if (this.idleRotation && this.idleRotation.isActive) {
+      const stillRotating = updateIdleRotation(
+        this.idleRotation,
+        this.camera,
+        this.controls,
+        elapsed
+      )
+
+      // If rotation stopped (user interaction), mark as inactive
+      if (!stillRotating) {
+        this.idleRotation.isActive = false
+        console.log('✅ Idle rotation stopped - user has full control')
+      }
+    }
+
     // Update controls (pass delta for camera-controls; wrapper handles both)
     this.controls.update(delta)
 
     // Animate city lights with flickering effect
     if (this.cityLights) {
       animateCityLights(this.cityLights, elapsed)
+      // Update fog uniforms for city lights shaders
+      updateCityLightsFog(this.cityLights, this.scene)
     }
 
     // Update background text with parallax effect
@@ -287,6 +364,34 @@ export class HelsinkiScene {
     // Render scene
     this.renderer.setRenderTarget(null)
     this.renderer.render(this.scene, this.camera)
+  }
+
+  /**
+   * Play the intro cinematic animation
+   * Smoothly zooms and rotates camera with asymptotic deceleration (never fully stops)
+   */
+  public playIntroAnimation(): void {
+    // Guard against starting animation twice
+    if (this.cinematicAnimation) {
+      console.log('⚠️ Cinematic animation already exists, skipping.')
+      return
+    }
+
+    // Create animation state
+    this.cinematicAnimation = {
+      isPlaying: true,
+      startTime: this.clock.getElapsedTime(),
+      ...createCinematicAnimation(),
+    }
+    
+    console.log('🎬 Starting cinematic intro animation with asymptotic deceleration...')
+  }
+
+  /**
+   * Check if cinematic animation is currently playing (including idle rotation)
+   */
+  public isCinematicAnimationPlaying(): boolean {
+    return this.cinematicAnimation?.isPlaying ?? false
   }
 
   public dispose(): void {
@@ -348,31 +453,40 @@ export class HelsinkiScene {
 
     // Update background
     this.scene.background = this.isNightMode
-      ? new THREE.Color(0x0a0a15)  // Dark night sky
-      : new THREE.Color(0xf0efe6)  // Light beige day sky
+      ? new THREE.Color(COLORS.night.sky)  // Dark night sky
+      : new THREE.Color(COLORS.day.sky)  // Light beige day sky
+
+    // Update fog color
+    updateFogColor(this.fog, this.isNightMode)
+
+    // Update bottom fog color in post-processing
+    this.postProcessMaterial.uniforms.uBottomFogColor.value.setHex(
+      this.isNightMode ? COLORS.night.sky : COLORS.day.sky
+    )
 
     // Update edge line colors
     if (this.helsinkiModel) {
-      this.helsinkiModel.traverse((child) => {
-        // Update LineSegments materials (the edge lines)
-        if (child instanceof THREE.LineSegments && child.material instanceof THREE.LineBasicMaterial) {
+      updateMaterialsInHierarchy(
+        this.helsinkiModel,
+        isLineSegmentsWithBasicMaterial,
+        (lineSegments) => {
           if (this.isNightMode) {
             // Night mode: subtle gray lines (very faint to avoid visual clutter)
-            child.material.color.setHex(0x4a4a52)
-            child.material.transparent = true
-            child.material.opacity = 0.25
+            lineSegments.material.color.setHex(COLORS.night.wireframe)
+            lineSegments.material.transparent = true
+            lineSegments.material.opacity = COLORS.night.wireframeOpacity
           } else {
             // Day mode: dark brown lines but still subtle
-            child.material.color.setHex(0x2b0a05)
-            child.material.transparent = true
-            child.material.opacity = 0.35
+            lineSegments.material.color.setHex(COLORS.day.wireframe)
+            lineSegments.material.transparent = true
+            lineSegments.material.opacity = COLORS.day.wireframeOpacity
           }
           // Keep depth test on and depth write off so overlapping lines don't accumulate visually
-          child.material.depthTest = true
-          child.material.depthWrite = false
-          child.material.needsUpdate = true
+          lineSegments.material.depthTest = true
+          lineSegments.material.depthWrite = false
+          lineSegments.material.needsUpdate = true
         }
-      })
+      )
     }
 
     // Toggle stars visibility
@@ -429,7 +543,7 @@ export class HelsinkiScene {
    * @param color color of the lights (hex number or string)
    * @param size base radius of a light sphere
    */
-  public addCityLights(count = 1000, color: number | string = 0xfff1c8, size = 6) {
+  public addCityLights(count = 1000, color: number | string = CITY_LIGHTS.color, size = 6) {
     if (!this.helsinkiModel) return
     this.removeCityLights()
     const inst = addCityLights(this.helsinkiModel, count, color, size)
@@ -455,7 +569,7 @@ export class HelsinkiScene {
     if (this.cityLights) this.cityLights.visible = enabled
   }
 
-  public addCityLightsPoints(count = 3000, color: number | string = 0xfff1c8) {
+  public addCityLightsPoints(count = 3000, color: number | string = CITY_LIGHTS.color) {
     if (!this.helsinkiModel) return
     this.removeCityLights()
     const group = addCityLightsPoints(this.helsinkiModel, count, color)

@@ -3,6 +3,8 @@
  */
 import * as THREE from 'three'
 import { MeshSurfaceSampler } from 'three/examples/jsm/math/MeshSurfaceSampler.js'
+import { CITY_LIGHTS } from '../constants/designSystem'
+import { collectMeshes, computeMeshAreas } from '../helpers'
 
 // Custom shader for per-point flickering
 const vertexShader = `
@@ -10,11 +12,13 @@ const vertexShader = `
   attribute vec3 customColor;
   varying float vFlickerState;
   varying vec3 vColor;
+  varying float vFogDepth;
 
   void main() {
     vFlickerState = flickerState;
     vColor = customColor;
     vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+    vFogDepth = -mvPosition.z;
     gl_PointSize = 15.0 * (300.0 / -mvPosition.z);
     gl_Position = projectionMatrix * mvPosition;
   }
@@ -22,23 +26,33 @@ const vertexShader = `
 
 const fragmentShader = `
   uniform sampler2D pointTexture;
+  uniform vec3 fogColor;
+  uniform float fogNear;
+  uniform float fogFar;
   varying float vFlickerState;
   varying vec3 vColor;
+  varying float vFogDepth;
 
   void main() {
     vec4 texColor = texture2D(pointTexture, gl_PointCoord);
     float opacity = vFlickerState * texColor.a;
-    gl_FragColor = vec4(vColor, opacity);
+    vec4 baseColor = vec4(vColor, opacity);
+    
+    // Apply fog
+    float fogFactor = smoothstep(fogNear, fogFar, vFogDepth);
+    gl_FragColor = mix(baseColor, vec4(fogColor, baseColor.a), fogFactor);
   }
 `
 
 const glowVertexShader = `
   attribute float flickerState;
   varying float vFlickerState;
+  varying float vFogDepth;
 
   void main() {
     vFlickerState = flickerState;
     vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+    vFogDepth = -mvPosition.z;
     gl_PointSize = 80.0 * (300.0 / -mvPosition.z);
     gl_Position = projectionMatrix * mvPosition;
   }
@@ -47,16 +61,24 @@ const glowVertexShader = `
 const glowFragmentShader = `
   uniform sampler2D pointTexture;
   uniform vec3 color;
+  uniform vec3 fogColor;
+  uniform float fogNear;
+  uniform float fogFar;
   varying float vFlickerState;
+  varying float vFogDepth;
 
   void main() {
     vec4 texColor = texture2D(pointTexture, gl_PointCoord);
     float opacity = vFlickerState * 0.6 * texColor.a;
-    gl_FragColor = vec4(color, opacity);
+    vec4 baseColor = vec4(color, opacity);
+    
+    // Apply fog
+    float fogFactor = smoothstep(fogNear, fogFar, vFogDepth);
+    gl_FragColor = mix(baseColor, vec4(fogColor, baseColor.a), fogFactor);
   }
 `
 
-export function createLightSprite(color: number | string = 0xfff1c8) {
+export function createLightSprite(color: number | string = CITY_LIGHTS.color) {
   const size = 64
   const canvas = document.createElement('canvas')
   canvas.width = size
@@ -83,15 +105,12 @@ export function createLightSprite(color: number | string = 0xfff1c8) {
   return tex
 }
 
-export function addCityLights(helsinkiModel: THREE.Group | null, count = 1000, color: number | string = 0xfff1c8, size = 6) {
+export function addCityLights(helsinkiModel: THREE.Group | null, count = 1000, color: number | string = CITY_LIGHTS.color, size = 6) {
   if (!helsinkiModel) return null
 
   // Remove old lights if caller managed that
 
-  const meshes: THREE.Mesh[] = []
-  helsinkiModel.traverse((child) => {
-    if (child instanceof THREE.Mesh && child.geometry) meshes.push(child as THREE.Mesh)
-  })
+  const meshes = collectMeshes(helsinkiModel)
   if (meshes.length === 0) return null
 
   const geometry = new THREE.SphereGeometry(size * 0.25, 4, 4)
@@ -102,6 +121,7 @@ export function addCityLights(helsinkiModel: THREE.Group | null, count = 1000, c
     opacity: 0.65,
     depthWrite: false,
     vertexColors: true,
+    fog: true, // Enable fog for city lights
   })
 
   const inst = new THREE.InstancedMesh(geometry, mat, count)
@@ -121,38 +141,7 @@ export function addCityLights(helsinkiModel: THREE.Group | null, count = 1000, c
   const modelInvMatrix = new THREE.Matrix4().copy(helsinkiModel.matrixWorld).invert()
   const modelNormalMatrix = new THREE.Matrix3().getNormalMatrix(modelInvMatrix)
 
-  const computeSurfaceArea = (geom: THREE.BufferGeometry) => {
-    const posAttr = geom.getAttribute('position') as THREE.BufferAttribute
-    const idx = geom.getIndex()
-    let area = 0
-    const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3()
-    if (idx) {
-      for (let i = 0; i < idx.count; i += 3) {
-        a.fromBufferAttribute(posAttr, idx.getX(i))
-        b.fromBufferAttribute(posAttr, idx.getX(i + 1))
-        c.fromBufferAttribute(posAttr, idx.getX(i + 2))
-        area += new THREE.Triangle(a, b, c).getArea()
-      }
-    } else {
-      for (let i = 0; i < posAttr.count; i += 3) {
-        a.fromBufferAttribute(posAttr, i)
-        b.fromBufferAttribute(posAttr, i + 1)
-        c.fromBufferAttribute(posAttr, i + 2)
-        area += new THREE.Triangle(a, b, c).getArea()
-      }
-    }
-    return area
-  }
-
-  const meshAreas: number[] = meshes.map((mesh) => {
-    try {
-      const geom = mesh.geometry as THREE.BufferGeometry
-      if (!geom.boundingBox) geom.computeBoundingBox()
-      return Math.max(0.000001, computeSurfaceArea(geom))
-    } catch (err) {
-      return 0.000001
-    }
-  })
+  const meshAreas = computeMeshAreas(meshes)
 
   const totalArea = meshAreas.reduce((s, v) => s + v, 0)
 
@@ -209,13 +198,10 @@ export function addCityLights(helsinkiModel: THREE.Group | null, count = 1000, c
   return inst
 }
 
-export function addCityLightsPoints(helsinkiModel: THREE.Group | null, count = 3000, color: number | string = 0xfff1c8) {
+export function addCityLightsPoints(helsinkiModel: THREE.Group | null, count = 3000, color: number | string = CITY_LIGHTS.color) {
   if (!helsinkiModel) return null
 
-  const meshes: THREE.Mesh[] = []
-  helsinkiModel.traverse((child) => {
-    if (child instanceof THREE.Mesh && child.geometry) meshes.push(child as THREE.Mesh)
-  })
+  const meshes = collectMeshes(helsinkiModel)
   if (meshes.length === 0) return null
 
   const positions: number[] = []
@@ -223,37 +209,7 @@ export function addCityLightsPoints(helsinkiModel: THREE.Group | null, count = 3
   const pos = new THREE.Vector3()
   const normal = new THREE.Vector3()
 
-  const computeSurfaceArea = (geom: THREE.BufferGeometry) => {
-    const posAttr = geom.getAttribute('position') as THREE.BufferAttribute
-    const idx = geom.getIndex()
-    let area = 0
-    const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3()
-    if (idx) {
-      for (let i = 0; i < idx.count; i += 3) {
-        a.fromBufferAttribute(posAttr, idx.getX(i))
-        b.fromBufferAttribute(posAttr, idx.getX(i + 1))
-        c.fromBufferAttribute(posAttr, idx.getX(i + 2))
-        area += new THREE.Triangle(a, b, c).getArea()
-      }
-    } else {
-      for (let i = 0; i < posAttr.count; i += 3) {
-        a.fromBufferAttribute(posAttr, i)
-        b.fromBufferAttribute(posAttr, i + 1)
-        c.fromBufferAttribute(posAttr, i + 2)
-        area += new THREE.Triangle(a, b, c).getArea()
-      }
-    }
-    return area
-  }
-
-  const meshAreas = meshes.map((mesh) => {
-    try {
-      const geom = mesh.geometry as THREE.BufferGeometry
-      return Math.max(0.000001, computeSurfaceArea(geom))
-    } catch (err) {
-      return 0.000001
-    }
-  })
+  const meshAreas = computeMeshAreas(meshes)
   const totalArea = meshAreas.reduce((s, v) => s + v, 0)
 
   let placed = 0
@@ -313,7 +269,10 @@ export function addCityLightsPoints(helsinkiModel: THREE.Group | null, count = 3
   // Use custom shader material for per-point flickering
   const coreMaterial = new THREE.ShaderMaterial({
     uniforms: {
-      pointTexture: { value: sprite }
+      pointTexture: { value: sprite },
+      fogColor: { value: new THREE.Color() },
+      fogNear: { value: 0 },
+      fogFar: { value: 0 }
     },
     vertexShader: vertexShader,
     fragmentShader: fragmentShader,
@@ -321,6 +280,7 @@ export function addCityLightsPoints(helsinkiModel: THREE.Group | null, count = 3
     depthWrite: false,
     depthTest: true,
     blending: THREE.AdditiveBlending,
+    fog: true, // Enable fog
   })
 
   const corePoints = new THREE.Points(coreGeom, coreMaterial)
@@ -339,7 +299,10 @@ export function addCityLightsPoints(helsinkiModel: THREE.Group | null, count = 3
   const glowMaterial = new THREE.ShaderMaterial({
     uniforms: {
       pointTexture: { value: sprite },
-      color: { value: avgColor }
+      color: { value: avgColor },
+      fogColor: { value: new THREE.Color() },
+      fogNear: { value: 0 },
+      fogFar: { value: 0 }
     },
     vertexShader: glowVertexShader,
     fragmentShader: glowFragmentShader,
@@ -347,6 +310,7 @@ export function addCityLightsPoints(helsinkiModel: THREE.Group | null, count = 3
     depthWrite: false,
     depthTest: false,
     blending: THREE.AdditiveBlending,
+    fog: true, // Enable fog
   })
 
   const glowPoints = new THREE.Points(glowGeom, glowMaterial)
@@ -362,12 +326,6 @@ export function addCityLightsPoints(helsinkiModel: THREE.Group | null, count = 3
   group.visible = false
   helsinkiModel.add(group)
 
-  console.log('✅ City lights created successfully:', {
-    totalLights: placed,
-    meshesProcessed: meshes.length,
-    visible: group.visible
-  })
-
   return group
 }
 
@@ -378,10 +336,7 @@ export function addCityLightsPoints(helsinkiModel: THREE.Group | null, count = 3
 export function addStreetLights(helsinkiModel: THREE.Group | null, spacing = 100, color: number | string = 0xfff5d4) {
   if (!helsinkiModel) return null
 
-  const meshes: THREE.Mesh[] = []
-  helsinkiModel.traverse((child) => {
-    if (child instanceof THREE.Mesh && child.geometry) meshes.push(child as THREE.Mesh)
-  })
+  const meshes = collectMeshes(helsinkiModel)
   if (meshes.length === 0) return null
 
   const streetLightPositions: THREE.Vector3[] = []
@@ -447,10 +402,7 @@ export function addStreetLights(helsinkiModel: THREE.Group | null, spacing = 100
     edges.dispose()
   })
 
-  console.log(`🚦 Found ${streetLightPositions.length} street light positions`)
-
   if (streetLightPositions.length === 0) {
-    console.warn('⚠️ No suitable street edges found - model may need manual street markers in Blender')
     return null
   }
 
@@ -533,8 +485,6 @@ export function addStreetLights(helsinkiModel: THREE.Group | null, spacing = 100
 
   helsinkiModel.add(group)
 
-  console.log('✅ Street lights created successfully')
-
   return group
 }
 
@@ -583,6 +533,29 @@ export function animateCityLights(cityLights: THREE.Object3D, elapsed: number) {
       // Only mark for update if something actually changed
       if (needsUpdate) {
         flickerStateAttr.needsUpdate = true
+      }
+    }
+  })
+}
+
+/**
+ * Update fog uniforms for city lights shader materials
+ */
+export function updateCityLightsFog(cityLights: THREE.Object3D, scene: THREE.Scene) {
+  if (!cityLights || !scene.fog) return
+
+  const fog = scene.fog as THREE.Fog
+  const fogColor = fog.color
+  const fogNear = fog.near
+  const fogFar = fog.far
+
+  cityLights.traverse((child) => {
+    if (child instanceof THREE.Points) {
+      const material = child.material as THREE.ShaderMaterial
+      if (material.uniforms) {
+        if (material.uniforms.fogColor) material.uniforms.fogColor.value.copy(fogColor)
+        if (material.uniforms.fogNear) material.uniforms.fogNear.value = fogNear
+        if (material.uniforms.fogFar) material.uniforms.fogFar.value = fogFar
       }
     }
   })

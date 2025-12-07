@@ -4,6 +4,7 @@
  */
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { COLORS } from '../constants/designSystem'
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
 
 export type RenderMode = 'wireframe' | 'textured' | 'textured-red' | 'no-texture-red' | 'faint-buildings'
@@ -21,8 +22,28 @@ export interface LoadParams {
 
 export async function loadHelsinkiModel(params: LoadParams): Promise<THREE.Group | null> {
   const { modelPath, scene, camera, controls, isNightMode = false, renderMode = 'textured', onLoadProgress, onLoadComplete } = params
+  // Quick existence check: try a HEAD request with timeout to fail fast if the GLB isn't available
+  const checkResourceExists = async (url: string, timeoutMs = 8000): Promise<boolean> => {
+    if (typeof fetch === 'undefined') return true // runtime doesn't support fetch (unlikely in browser)
+    const controller = new AbortController()
+    const id = setTimeout(() => controller.abort(), timeoutMs)
+    try {
+      const res = await fetch(url, { method: 'HEAD', signal: controller.signal })
+      clearTimeout(id)
+      return res.ok
+    } catch (e) {
+      clearTimeout(id)
+      return false
+    }
+  }
 
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
+    const exists = await checkResourceExists(modelPath)
+    if (!exists) {
+      const err = new Error(`Model not found or unreachable at path: ${modelPath}`)
+      reject(err)
+      return
+    }
     const loader = new GLTFLoader()
 
     const dracoLoader = new DRACOLoader()
@@ -73,7 +94,7 @@ export async function loadHelsinkiModel(params: LoadParams): Promise<THREE.Group
                 // Add heavily reduced edge lines (very high threshold = very few lines)
                 const edges = new THREE.EdgesGeometry(child.geometry, 45) // Very high threshold for minimal lines
                 const lineMaterial = new THREE.LineBasicMaterial({
-                  color: isNightMode ? 0x4a4a52 : 0x2b0a05, // Gray for night, dark red for day
+                  color: isNightMode ? COLORS.night.wireframe : COLORS.day.wireframe,
                   transparent: false,
                   opacity: 1.0,
                   linewidth: 1,
@@ -117,7 +138,7 @@ export async function loadHelsinkiModel(params: LoadParams): Promise<THREE.Group
                 // Add heavily reduced edge lines (very high threshold = very few lines)
                 const edges = new THREE.EdgesGeometry(child.geometry, 45) // Very high threshold for minimal lines
                 const lineMaterial = new THREE.LineBasicMaterial({
-                  color: isNightMode ? 0x4a4a52 : 0x2b0a05,
+                  color: isNightMode ? COLORS.night.wireframe : COLORS.day.wireframe,
                   transparent: false,
                   opacity: 1.0,
                   linewidth: 1,
@@ -152,9 +173,9 @@ export async function loadHelsinkiModel(params: LoadParams): Promise<THREE.Group
                 // Add edge lines to buildings
                 const edges = new THREE.EdgesGeometry(child.geometry, 15)
                 const lineMaterial = new THREE.LineBasicMaterial({
-                  color: isNightMode ? 0x4a4a52 : 0x2b0a05,
-                  transparent: true,
-                  opacity: isNightMode ? 0.25 : 0.35,
+                  color: isNightMode ? COLORS.night.wireframe : COLORS.day.wireframe,
+                  transparent: false,
+                  opacity: isNightMode ? COLORS.night.wireframeOpacity : COLORS.day.wireframeOpacity,
                   linewidth: 1,
                   depthTest: true,
                   depthWrite: false,
@@ -196,9 +217,9 @@ export async function loadHelsinkiModel(params: LoadParams): Promise<THREE.Group
                 // Add edge lines to buildings
                 const edges = new THREE.EdgesGeometry(child.geometry, 15)
                 const lineMaterial = new THREE.LineBasicMaterial({
-                  color: isNightMode ? 0x4a4a52 : 0x2b0a05,
+                  color: isNightMode ? COLORS.night.wireframe : COLORS.day.wireframe,
                   transparent: true,
-                  opacity: isNightMode ? 0.25 : 0.35,
+                  opacity: isNightMode ? COLORS.night.wireframeOpacity : COLORS.day.wireframeOpacity,
                   linewidth: 1,
                   depthTest: true,
                   depthWrite: false,

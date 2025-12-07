@@ -21,6 +21,7 @@ export class HelsinkiCameraController {
   public maxDistance: number = 50000
   public maxPolarAngle: number = Math.PI / 2
   public target: THREE.Vector3 = new THREE.Vector3(0, 0, 0)
+  private userInteracting: boolean = false
 
   // internal clock for delta when needed
   private _last = performance.now()
@@ -38,6 +39,26 @@ export class HelsinkiCameraController {
     this.orbit.maxDistance = this.maxDistance
     this.orbit.maxPolarAngle = this.maxPolarAngle
     this.orbit.target.copy(this.target)
+
+    // Listen for user interaction events
+    this.setupInteractionListeners()
+  }
+
+  private setupInteractionListeners(): void {
+    // Mouse/touch events
+    this.domElement.addEventListener('pointerdown', () => { this.userInteracting = true })
+    this.domElement.addEventListener('wheel', () => { this.userInteracting = true }, { passive: true })
+    
+    // Also listen to touchstart for mobile
+    this.domElement.addEventListener('touchstart', () => { this.userInteracting = true }, { passive: true })
+  }
+
+  public isUserInteracting(): boolean {
+    return this.userInteracting
+  }
+
+  public resetInteractionFlag(): void {
+    this.userInteracting = false
   }
 
   /**
@@ -87,8 +108,6 @@ export class HelsinkiCameraController {
           this.cameraControls.update(1 / 60)
         } catch (err) {
           // fall back to OrbitControls on error
-          // eslint-disable-next-line no-console
-          console.error('camera-controls update failed, falling back to OrbitControls', err)
           try {
             if (this.cameraControls && this.cameraControls.dispose) this.cameraControls.dispose()
           } catch (e) {}
@@ -103,8 +122,6 @@ export class HelsinkiCameraController {
           this.cameraControls.update(dt)
         } catch (err) {
           // If camera-controls throws, catch and fallback to OrbitControls so the app doesn't stop animating
-          // eslint-disable-next-line no-console
-          console.error('camera-controls.update threw an error — switching back to OrbitControls', err)
           try {
             if (this.cameraControls && this.cameraControls.dispose) this.cameraControls.dispose()
           } catch (e) {}

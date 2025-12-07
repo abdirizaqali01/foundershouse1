@@ -4,18 +4,20 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
-import { HelsinkiScene } from '../utils/HelsinkiScene_GLB'
-import type { RenderMode } from '../utils/modelLoader'
+import { HelsinkiScene } from '../core'
+import type { RenderMode } from '../loaders'
 import './HelsinkiViewer.css'
 
 export const HelsinkiViewer = () => {
   const containerRef = useRef<HTMLDivElement>(null)
   const sceneRef = useRef<HelsinkiScene | null>(null)
   const animationFrameRef = useRef<number>(0)
+  const tickerStartTimeRef = useRef<number>(Date.now())
 
   const [status, setStatus] = useState<string>('Initializing...')
   const [loading, setLoading] = useState<boolean>(true)
-  const [loadProgress, setLoadProgress] = useState<number>(0)
+  const [tickerProgress, setTickerProgress] = useState<number>(0)
+  const [modelLoaded, setModelLoaded] = useState<boolean>(false)
   const [isDemoNightMode, setIsDemoNightMode] = useState<boolean>(false)
   const [isAdvancedCamera, setIsAdvancedCamera] = useState<boolean>(false)
   const [renderMode, setRenderMode] = useState<RenderMode>('textured')
@@ -34,11 +36,10 @@ export const HelsinkiViewer = () => {
         },
         radius: 2, // 2km radius
         onLoadProgress: (progress) => {
-          setLoadProgress(progress)
           setStatus(`Loading Helsinki 3D model... ${progress.toFixed(1)}%`)
         },
         onLoadComplete: () => {
-          setLoading(false)
+          setModelLoaded(true)
           setStatus('Helsinki 3D - 2km radius')
         },
       })
@@ -73,6 +74,52 @@ export const HelsinkiViewer = () => {
     }
   }, [])
 
+  // Independent ticker animation - runs smoothly from 0-100 over ~2.5 seconds
+  useEffect(() => {
+    if (!loading) return
+
+    let raf = 0
+    const TICKER_DURATION = 2500 // 2.5 seconds to reach 100
+
+    const tick = () => {
+      const elapsed = Date.now() - tickerStartTimeRef.current
+      const timeBasedProgress = Math.min((elapsed / TICKER_DURATION) * 100, 100)
+
+      setTickerProgress((prev) => {
+        // Smoothly interpolate towards time-based progress
+        const target = timeBasedProgress
+        const distance = target - prev
+
+        if (Math.abs(distance) < 0.1) return target
+
+        // Smooth easing
+        const increment = distance * 0.1
+        return prev + increment
+      })
+
+      // Keep animating - the cleanup or loading state change will cancel it
+      raf = requestAnimationFrame(tick)
+    }
+
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [loading])
+
+  // Hide loading screen when both ticker reaches ~100 AND model is loaded
+  useEffect(() => {
+    if (modelLoaded && tickerProgress >= 99) {
+      // Small delay to ensure user sees 100%
+      const timer = setTimeout(() => {
+        setLoading(false)
+        // Play intro animation after hiding loading overlay
+        setTimeout(() => {
+          if (sceneRef.current) sceneRef.current.playIntroAnimation()
+        }, 300)
+      }, 200)
+      return () => clearTimeout(timer)
+    }
+  }, [modelLoaded, tickerProgress])
+
   const handleToggleDayNight = () => {
     if (sceneRef.current) {
       const newMode = !isDemoNightMode
@@ -93,8 +140,17 @@ export const HelsinkiViewer = () => {
   const handleRenderModeChange = (mode: RenderMode) => {
     setRenderMode(mode)
     setLoading(true)
+    setTickerProgress(0)
+    setModelLoaded(false)
+    tickerStartTimeRef.current = Date.now() // Reset ticker timer
+
     // Reload scene with new render mode
     if (sceneRef.current && containerRef.current) {
+      // Cancel existing animation frame
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current)
+      }
+
       sceneRef.current.dispose()
       sceneRef.current = null
 
@@ -105,15 +161,23 @@ export const HelsinkiViewer = () => {
         renderMode: mode,
         isNightMode: isDemoNightMode,
         onLoadProgress: (progress) => {
-          setLoadProgress(progress)
           setStatus(`Loading... ${progress.toFixed(1)}%`)
         },
         onLoadComplete: () => {
-          setLoading(false)
+          setModelLoaded(true)
           setStatus('Helsinki 3D - 2km radius')
         },
       })
       sceneRef.current = scene
+
+      // Restart animation loop
+      const animate = () => {
+        if (sceneRef.current) {
+          sceneRef.current.update()
+          animationFrameRef.current = requestAnimationFrame(animate)
+        }
+      }
+      animate()
     }
   }
 
@@ -127,14 +191,7 @@ export const HelsinkiViewer = () => {
       {/* UI Overlay - Chartogne style */}
       <div className="ui-overlay">
         <div className="main-cta">
-          <span>H</span>
-          <span>E</span>
-          <span>L</span>
-          <span>S</span>
-          <span>I</span>
-          <span>N</span>
-          <span>K</span>
-          <span>I</span>
+          <img src="/FHLOGO.png" alt="FH Logo" className="fh-logo" />
         </div>
 
         <div className="controls">
@@ -163,14 +220,9 @@ export const HelsinkiViewer = () => {
       {loading && (
         <div className="loading-overlay">
           <div className="loading-content">
-            <h1 className="loading-title">Helsinki 3D</h1>
-            <p className="loading-text">Loading... {loadProgress.toFixed(1)}%</p>
-            <div className="loading-bar">
-              <div
-                className="loading-bar-fill"
-                style={{ width: `${loadProgress}%` }}
-              />
-            </div>
+            <h1 className="loading-title">The next generation of obsessed builders</h1>
+            {/* small ticker on the right */}
+            <div className="loading-ticker">{Math.floor(tickerProgress)}%</div>
           </div>
         </div>
       )}

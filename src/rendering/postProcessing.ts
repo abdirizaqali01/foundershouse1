@@ -5,6 +5,7 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js'
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js'
+import { COLORS } from '../constants/designSystem'
 
 export function setupPostProcessing(renderTarget: THREE.WebGLRenderTarget, perlinTexture: THREE.DataTexture) {
   const scene = new THREE.Scene()
@@ -15,11 +16,12 @@ export function setupPostProcessing(renderTarget: THREE.WebGLRenderTarget, perli
       tDiffuse: { value: renderTarget.texture },
       uPerlinTexture: { value: perlinTexture },
       uPaperTexture: { value: null },
-      uPencilColor: { value: new THREE.Color(0x000000) },
-      uPaperColor: { value: new THREE.Color(0xfdfcf5) },
+      uPencilColor: { value: new THREE.Color(COLORS.chartogne.black) },
+      uPaperColor: { value: new THREE.Color(COLORS.chartogne.creamBg) },
+      uBottomFogColor: { value: new THREE.Color(COLORS.day.sky) },
       uTime: { value: 0 },
-  uPencilStrength: { value: 1.0 },
-  uResolution: { value: new THREE.Vector2(window.innerWidth * window.devicePixelRatio, window.innerHeight * window.devicePixelRatio) },
+      uPencilStrength: { value: 1.0 },
+      uResolution: { value: new THREE.Vector2(window.innerWidth * window.devicePixelRatio, window.innerHeight * window.devicePixelRatio) },
     },
     vertexShader: postProcessVertexShader,
     fragmentShader: postProcessFragmentShader,

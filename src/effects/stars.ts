@@ -64,6 +64,7 @@ function createBackgroundStars(count: number): THREE.Points {
     transparent: true,
     opacity: 0.6,
     sizeAttenuation: true,
+    fog: false, // Stars should not be affected by fog
   })
 
   return new THREE.Points(geometry, material)
@@ -142,6 +143,7 @@ function createMilkyWay(count: number): THREE.Group {
     opacity: 0.75, // Much more visible!
     sizeAttenuation: true,
     blending: THREE.AdditiveBlending,
+    fog: false, // Stars should not be affected by fog
   })
 
   const corePoints = new THREE.Points(coreGeometry, coreMaterial)
@@ -200,6 +202,7 @@ function createMilkyWay(count: number): THREE.Group {
       opacity: 0.6,
       sizeAttenuation: true,
       blending: THREE.AdditiveBlending,
+      fog: false, // Stars should not be affected by fog
     })
 
     const clusterPoints = new THREE.Points(clusterGeometry, clusterMaterial)
@@ -243,6 +246,7 @@ function createProminentStars(count: number): THREE.Points {
     transparent: true,
     opacity: 0.9,
     sizeAttenuation: true,
+    fog: false, // Stars should not be affected by fog
   })
 
   return new THREE.Points(geometry, material)

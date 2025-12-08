@@ -84,18 +84,21 @@ export interface CinematicAnimationConfig {
 
 /**
  * Creates the intro animation configuration
- * Focuses on a building in the south-eastern quadrant
+ * Focuses on Tile_+029_+020_L17_0001 - a specific tile in the map
+ * Note: The exact position will depend on how the model was centered when exported.
+ * You can adjust buildingX and buildingZ below to fine-tune the focus point.
  */
 export function createCinematicAnimation(
   config: Partial<CinematicAnimationConfig> = {}
 ): Omit<CinematicAnimationState, 'isPlaying' | 'startTime'> {
-  // Default configuration
+  // Focus on Tile_+029_+020 - adjust these coordinates as needed to center on your desired tile
+  // These values are estimates and may need tweaking based on the actual model layout
   const {
-    buildingX = 800,  // East in rotated view
-    buildingZ = -600, // South in rotated view
+    buildingX = 0,     // The building coordinates (center of world)
+    buildingZ = 0,     // The building coordinates (center of world)
     buildingY = 0,
     startDistance = 3000,
-    endDistance = 380,
+    endDistance = 800, // Increased from 380 to keep building centered (further back = better framing)
     startAngle = Math.PI * 0.25, // 45 degrees from the side
     rotationAngle = Math.PI * 0.25, // Rotate 45 degrees (π/4 radians)
     duration = 5.0, // 5 seconds - slower, more cinematic
@@ -108,35 +111,19 @@ export function createCinematicAnimation(
     buildingZ + Math.sin(startAngle) * startDistance
   )
 
-  // Calculate ending position (close, tilted up, rotated 45 degrees)
+  // Calculate ending position (rotated 45 degrees from start)
   const endAngle = startAngle + rotationAngle
-  // Raise the end camera height so the final view is more level across the skyline.
-  // Previously this was 200 which, combined with the close endDistance, produced a steep downward look.
-  const endHeight = buildingY + 35// Camera height - raised for a more horizontal view
+  // End height: positioned to look slightly down at the building
+  const endHeight = buildingY + 150 // Raised to give nice elevated perspective
   const endPosition = new THREE.Vector3(
     buildingX + Math.cos(endAngle) * endDistance,
     endHeight,
     buildingZ + Math.sin(endAngle) * endDistance
   )
 
-  // Compute a lookAt point so that at the end position the camera looks
-  // across the skyline with ~10° downward tilt (less 'looking down' into the city).
-  // We calculate the horizontal distance from the end camera position to the building
-  // and set the lookAt Y so the vertical angle equals the desired 10 degrees.
-  const horizontalDistance = Math.hypot(
-    endPosition.x - buildingX,
-    endPosition.z - buildingZ
-  )
-  // Use a much smaller downward tilt so the camera looks nearly straight ahead
-  const desiredDownDegrees = -2 // desired downward pitch in degrees (smaller = more level)
-  const desiredDownRadians = THREE.MathUtils.degToRad(desiredDownDegrees)
-  const lookAtY = endPosition.y - Math.tan(desiredDownRadians) * horizontalDistance
-
-  // Ensure the lookAt point doesn't go below the building base too far
-  const minLookAtY = buildingY + 20
-  const finalLookAtY = Math.max(lookAtY, minLookAtY)
-
-  const lookAtPoint = new THREE.Vector3(buildingX, finalLookAtY, buildingZ)
+  // Simple lookAt: point directly at the building with a slight elevation
+  // This ensures the building stays perfectly centered in frame
+  const lookAtPoint = new THREE.Vector3(buildingX, buildingY + 50, buildingZ)
 
   return {
     duration,
@@ -170,7 +157,6 @@ export function updateCinematicAnimation(
   // Continue for a bit longer to blend with idle rotation (1.5x duration)
   if (rawProgress >= 1.5) {
     // Animation truly complete - hand off to idle rotation
-    console.log('✅ Cinematic animation blended into idle rotation')
     return false
   }
 

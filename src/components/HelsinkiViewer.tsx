@@ -120,6 +120,19 @@ export const HelsinkiViewer = () => {
     }
   }, [modelLoaded, tickerProgress])
 
+  // Failsafe: Force hide loading screen after 30 seconds (for very large models)
+  useEffect(() => {
+    const failsafeTimer = setTimeout(() => {
+      if (loading) {
+        console.warn('⚠️ Loading timeout reached - forcing completion')
+        setLoading(false)
+        setModelLoaded(true)
+      }
+    }, 30000) // 30 seconds
+
+    return () => clearTimeout(failsafeTimer)
+  }, [loading])
+
   const handleToggleDayNight = () => {
     if (sceneRef.current) {
       const newMode = !isDemoNightMode

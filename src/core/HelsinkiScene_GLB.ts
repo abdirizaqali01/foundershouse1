@@ -127,8 +127,7 @@ export class HelsinkiScene {
 
     // Load Helsinki GLB model (delegated to modelLoader)
     loadModel({
-      modelPath: '/untitled.glb',
-      // modelPath: '/test.glb', // Test map - commented out
+      modelPath: '/untitled.glb', // Using old map temporarily - untitled.glb has broken WebP texture references
       scene: this.scene,
       camera: this.camera,
       controls: this.controls,
@@ -138,17 +137,38 @@ export class HelsinkiScene {
       onLoadComplete: config.onLoadComplete,
     }).then((model) => {
       this.helsinkiModel = model
-      console.log('✅ Helsinki model loaded successfully')
+      
+      // Cinematic focus point using map coordinates (origin at 0,0)
+      // Map coordinate system: +X = right, -X = left, +Y = up, -Y = down
+      const mapX = 164 // Map X: positive = right, negative = left
+      const mapY = 804 // Map Y: positive = up/north, negative = down/south
+      
+      // Transform map coordinates to world space (model is rotated -90° on X)
+      const focusX = mapX
+      const focusZ = -mapY  // Inverted because model is rotated
+      const focusY = 0      // Height - all tiles on same level
+      
+      const newConfig = createCinematicAnimation({
+        buildingX: focusX,
+        buildingZ: focusZ,
+        buildingY: focusY,
+      })
+      
+      // Create or update animation state with custom coordinates
+      // Don't start playing yet - wait for playIntroAnimation() call
+      this.cinematicAnimation = {
+        ...newConfig,
+        isPlaying: false,  // Will be set to true by playIntroAnimation()
+        startTime: 0,      // Will be set by playIntroAnimation()
+      }
+      
       // After the helsinkiModel reference is set, generate city lights if night mode
       if (this.isNightMode) {
-        console.log('🌙 Night mode active - adding city lights...')
         try {
           this.addCityLightsPoints(800) // Reduced from 1200 for better performance
         } catch (e) {
           console.error('❌ Failed to add city lights:', e)
         }
-      } else {
-        console.log('☀️ Day mode - city lights not added')
       }
     }).catch((error) => {
       console.error('❌ Helsinki model loading failed:', error)
@@ -222,7 +242,6 @@ export class HelsinkiScene {
     )
   }
 
-
   private onWindowResize(): void {
     this.camera.aspect = window.innerWidth / window.innerHeight
     this.camera.updateProjectionMatrix()
@@ -248,8 +267,6 @@ export class HelsinkiScene {
     }
   }
 
-  
-
   public update(): void {
     const elapsed = this.clock.getElapsedTime()
     const delta = this.clock.getDelta()
@@ -261,9 +278,9 @@ export class HelsinkiScene {
       // Start idle rotation 1 second before end (at 4 seconds of 5 second animation = 80%)
       // The slow rotation speed matches the cinematic's deceleration perfectly
       if (progress >= 0.80 && !this.idleRotation) {
-        const mapCenter = new THREE.Vector3(0, 0, 0)
-        this.idleRotation = createIdleRotation(this.camera, mapCenter, elapsed)
-        console.log('🔄 Idle rotation started 1 second before end - invisible blend')
+        // Use the same focus point as cinematic - the building we're revolving around
+        const focusPoint = this.cinematicAnimation.targetLookAt.clone()
+        this.idleRotation = createIdleRotation(this.camera, focusPoint, elapsed)
       }
       
       // Continue cinematic animation until idle rotation takes over
@@ -280,19 +297,16 @@ export class HelsinkiScene {
         // If animation stopped naturally, mark as not playing
         if (!stillPlaying) {
           this.cinematicAnimation.isPlaying = false
-          console.log('✅ Cinematic animation complete')
         }
       } else {
         // At 98%, hand off to idle rotation completely
         this.cinematicAnimation.isPlaying = false
-        console.log('✅ Cinematic handoff to idle at 98%')
         
         // Ensure fog is at final values
         if (this.fog) {
           this.fog.near = FOG.near
           this.fog.far = FOG.far
           this.scene.fog = this.fog
-          console.log('🌫️ Fog fully enabled')
         }
       }
       
@@ -329,7 +343,6 @@ export class HelsinkiScene {
       // If rotation stopped (user interaction), mark as inactive
       if (!stillRotating) {
         this.idleRotation.isActive = false
-        console.log('✅ Idle rotation stopped - user has full control')
       }
     }
 
@@ -371,20 +384,19 @@ export class HelsinkiScene {
    * Smoothly zooms and rotates camera with asymptotic deceleration (never fully stops)
    */
   public playIntroAnimation(): void {
-    // Guard against starting animation twice
+    // If animation config exists (with custom coordinates), just start it
     if (this.cinematicAnimation) {
-      console.log('⚠️ Cinematic animation already exists, skipping.')
+      this.cinematicAnimation.isPlaying = true
+      this.cinematicAnimation.startTime = this.clock.getElapsedTime()
       return
     }
 
-    // Create animation state
+    // Fallback: create default animation if none exists
     this.cinematicAnimation = {
       isPlaying: true,
       startTime: this.clock.getElapsedTime(),
       ...createCinematicAnimation(),
     }
-    
-    console.log('🎬 Starting cinematic intro animation with asymptotic deceleration...')
   }
 
   /**
@@ -502,7 +514,6 @@ export class HelsinkiScene {
     if (this.isNightMode) {
       // If switching to night mode and city lights don't exist, create them
       if (!this.cityLights && this.helsinkiModel) {
-        console.log('🌙 Creating city lights for night mode...')
         this.addCityLightsPoints(1200)
       }
       // Make sure they're visible

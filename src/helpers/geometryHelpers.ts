@@ -69,7 +69,6 @@ export function computeMeshAreas(meshes: THREE.Mesh[]): number[] {
       const area = computeSurfaceArea(mesh.geometry as THREE.BufferGeometry)
       return Math.max(0.000001, area) // Prevent zero division
     } catch (err) {
-      console.warn('Failed to compute surface area for mesh:', err)
       return 0.000001
     }
   })

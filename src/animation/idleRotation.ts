@@ -69,7 +69,6 @@ export function updateIdleRotation(
       rotation.isPaused = true
       rotation.pausedTime = elapsedTime
       rotation.accumulatedTime += (elapsedTime - rotation.startTime)
-      console.log('⏸️ User interaction detected - pausing idle rotation')
     }
     return true // Keep rotation active but paused
   }
@@ -79,7 +78,6 @@ export function updateIdleRotation(
     if (controls && controls.shouldResumeIdle && controls.shouldResumeIdle()) {
       // Resume rotation from current camera position (user may have moved it)
       resumeIdleRotation(rotation, camera, elapsedTime)
-      console.log('▶️ Resuming idle rotation after 8 seconds of inactivity')
     } else {
       return true // Still paused, waiting for idle timeout
     }

@@ -207,6 +207,35 @@ The scene is exposed to the browser console for runtime debugging:
 // Access the scene instance
 window.helsinkiScene
 
+// === Camera Utilities ===
+
+// Get current camera position/angle info
+window.helsinkiScene.debugCamera()
+
+// Get current camera config as copyable code
+window.helsinkiScene.printCameraConfig()
+
+// Apply a preset camera view
+window.helsinkiScene.applyCameraPreset('BIRDS_EYE')
+// Available presets: CINEMATIC_END, BIRDS_EYE, WIDE_SHOT, CLOSE_UP
+
+// Focus on a Point of Interest
+window.helsinkiScene.focusPOI('FOUNDERS_HOUSE', 800, 135, 20)
+// Parameters: (POI name, distance, azimuth°, elevation°)
+
+// Set custom camera configuration
+window.helsinkiScene.setCameraConfig({
+  targetX: 164, targetY: 50, targetZ: -804,
+  polar: { distance: 500, azimuth: 90, elevation: 15 },
+  fov: 60
+})
+
+// List available POIs and presets
+window.helsinkiScene.getPOIs()
+window.helsinkiScene.getCameraPresets()
+
+// === Other Tools ===
+
 // Adjust pencil shader strength (0-1)
 window.helsinkiScene.setPencilStrength(0.7)
 

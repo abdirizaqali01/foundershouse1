@@ -60,9 +60,9 @@ function createBackgroundStars(count: number): THREE.Points {
 
   const material = new THREE.PointsMaterial({
     color: 0xffffff,
-    size: 2,
+    size: 2.44, // 2 * 1.22 = 2.44 (22% bigger)
     transparent: true,
-    opacity: 0.6,
+    opacity: 0.732, // 0.6 * 1.22 = 0.732 (22% brighter)
     sizeAttenuation: true,
     fog: false, // Stars should not be affected by fog
   })
@@ -138,9 +138,9 @@ function createMilkyWay(count: number): THREE.Group {
 
   const coreMaterial = new THREE.PointsMaterial({
     vertexColors: true,
-    size: 2.5,
+    size: 3.05, // 2.5 * 1.22 = 3.05 (22% bigger)
     transparent: true,
-    opacity: 0.75, // Much more visible!
+    opacity: 0.915, // 0.75 * 1.22 = 0.915 (22% brighter)
     sizeAttenuation: true,
     blending: THREE.AdditiveBlending,
     fog: false, // Stars should not be affected by fog
@@ -197,9 +197,9 @@ function createMilkyWay(count: number): THREE.Group {
 
     const clusterMaterial = new THREE.PointsMaterial({
       vertexColors: true,
-      size: 2,
+      size: 2.44, // 2 * 1.22 = 2.44 (22% bigger)
       transparent: true,
-      opacity: 0.6,
+      opacity: 0.732, // 0.6 * 1.22 = 0.732 (22% brighter)
       sizeAttenuation: true,
       blending: THREE.AdditiveBlending,
       fog: false, // Stars should not be affected by fog
@@ -242,9 +242,9 @@ function createProminentStars(count: number): THREE.Points {
 
   const material = new THREE.PointsMaterial({
     color: 0xffffee,
-    size: 5,
+    size: 6.1, // 5 * 1.22 = 6.1 (22% bigger)
     transparent: true,
-    opacity: 0.9,
+    opacity: 1.0, // 0.9 * 1.22 = 1.098, clamped to 1.0 (22% brighter, maxed at 100%)
     sizeAttenuation: true,
     fog: false, // Stars should not be affected by fog
   })

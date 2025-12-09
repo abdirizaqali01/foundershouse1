@@ -12,8 +12,11 @@ import { loadHelsinkiModel as loadModel, type RenderMode } from '../loaders'
 import { setupPostProcessing, setupComposer, setupSceneLighting } from '../rendering'
 import { addCityLights, addCityLightsPoints, animateCityLights, removeCityLights, updateCityLightsFog, createStarfield, animateStars, setupSceneFog, updateFogColor } from '../effects'
 import { createCinematicAnimation, updateCinematicAnimation, getAnimationProgress, cinematicEaseOut, type CinematicAnimationState, createIdleRotation, updateIdleRotation, type IdleRotationState } from '../animation'
-import { PerlinNoiseGenerator, isNightInHelsinki, updateMaterialsInHierarchy, isLineSegmentsWithBasicMaterial } from '../helpers'
+import { PerlinNoiseGenerator, isNightInHelsinki, updateMaterialsInHierarchy, isLineSegmentsWithBasicMaterial, applyCameraConfig, getCurrentCameraConfig, formatCameraConfigAsCode, CAMERA_PRESETS, type CameraConfig } from '../helpers'
 import { COLORS, FOG, FONTS, CITY_LIGHTS } from '../constants/designSystem'
+import { CAMERA_BASE, CAMERA_RESTRICTIONS, CAMERA_DAMPING, CAMERA_SPEED_LIMITS } from '../constants/cameraConfig'
+import { FOUNDERS_HOUSE_POI, POINTS_OF_INTEREST } from '../constants/poi'
+import { clampToMapBounds } from '../constants/mapBoundaries'
 
 export interface SceneConfig {
   container: HTMLElement
@@ -81,14 +84,47 @@ export class HelsinkiScene {
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap
     config.container.appendChild(this.renderer.domElement)
 
-  // Setup camera controller (starts with OrbitControls, can upgrade to camera-controls)
+  // Setup camera controller with restricted controls for narrative control
   this.controls = new HelsinkiCameraController(this.camera, this.renderer.domElement)
-  this.controls.enableDamping = true
-  this.controls.dampingFactor = 0.05
+  this.controls.enableDamping = CAMERA_DAMPING.enabled
+  this.controls.dampingFactor = CAMERA_DAMPING.factor
   this.controls.screenSpacePanning = false
-  this.controls.minDistance = 100
-  this.controls.maxDistance = 50000
-  this.controls.maxPolarAngle = Math.PI / 2
+  
+  // Speed limits - prevents spinning too fast
+  this.controls.rotateSpeed = CAMERA_SPEED_LIMITS.rotateSpeed
+  this.controls.zoomSpeed = CAMERA_SPEED_LIMITS.zoomSpeed
+  this.controls.panSpeed = CAMERA_SPEED_LIMITS.panSpeed
+  
+  // Distance constraints (zoom control)
+  this.controls.minDistance = CAMERA_RESTRICTIONS.distance.min
+  this.controls.maxDistance = CAMERA_RESTRICTIONS.distance.max
+  
+  // Elevation constraints (vertical angle) - prevents looking too far up or down
+  // Convert elevation degrees to polar angles (measured from zenith)
+  // polarAngle = π/2 - elevation (90° - elevation in radians)
+  this.controls.maxPolarAngle = Math.PI / 2 - THREE.MathUtils.degToRad(CAMERA_RESTRICTIONS.elevation.min)
+  this.controls.minPolarAngle = Math.PI / 2 - THREE.MathUtils.degToRad(CAMERA_RESTRICTIONS.elevation.max)
+  
+  // NO azimuth restrictions - users can rotate 360° horizontally
+  this.controls.minAzimuthAngle = -Infinity
+  this.controls.maxAzimuthAngle = Infinity
+  
+  // Debug: Log camera restrictions
+  console.log('🎮 CAMERA RESTRICTIONS APPLIED:')
+  console.log('   Rotation speed:', CAMERA_SPEED_LIMITS.rotateSpeed, '(lower = slower)')
+  console.log('   Distance (zoom):', { min: this.controls.minDistance, max: this.controls.maxDistance })
+  console.log('   Elevation angle:', { 
+    min: CAMERA_RESTRICTIONS.elevation.min + '° down',
+    max: CAMERA_RESTRICTIONS.elevation.max + '° down'
+  })
+  console.log('   Horizontal rotation: UNRESTRICTED (360°)')
+  
+  // Import MAP_BOUNDARIES here for logging
+  import('../constants/mapBoundaries').then(({ MAP_BOUNDARIES }) => {
+    console.log('🗺️  MAP BOUNDARIES:')
+    console.log('   X (east-west):', MAP_BOUNDARIES.x)
+    console.log('   Z (north-south):', MAP_BOUNDARIES.z)
+  })
 
     // Setup render target for post-processing
     this.renderTarget = new THREE.WebGLRenderTarget(
@@ -138,20 +174,20 @@ export class HelsinkiScene {
     }).then((model) => {
       this.helsinkiModel = model
       
-      // Cinematic focus point using map coordinates (origin at 0,0)
-      // Map coordinate system: +X = right, -X = left, +Y = up, -Y = down
-      const mapX = 164 // Map X: positive = right, negative = left
-      const mapY = 804 // Map Y: positive = up/north, negative = down/south
+      // Use centralized POI configuration for Founders House
+      const poi = FOUNDERS_HOUSE_POI
+      const focusX = poi.worldCoords.x
+      const focusY = poi.worldCoords.y
+      const focusZ = poi.worldCoords.z
       
-      // Transform map coordinates to world space (model is rotated -90° on X)
-      const focusX = mapX
-      const focusZ = -mapY  // Inverted because model is rotated
-      const focusY = 0      // Height - all tiles on same level
-      
+      // Create cinematic animation with POI coordinates and camera restrictions
       const newConfig = createCinematicAnimation({
         buildingX: focusX,
         buildingZ: focusZ,
         buildingY: focusY,
+        endDistance: CAMERA_BASE.polar.distance,
+        endAzimuth: CAMERA_BASE.polar.azimuth,
+        endElevation: CAMERA_BASE.polar.elevation,
       })
       
       // Create or update animation state with custom coordinates
@@ -349,6 +385,13 @@ export class HelsinkiScene {
     // Update controls (pass delta for camera-controls; wrapper handles both)
     this.controls.update(delta)
 
+    // Enforce map boundaries - prevent camera target from going outside map
+    const currentTarget = this.controls.target
+    const clampedPosition = clampToMapBounds(currentTarget.x, currentTarget.z)
+    if (clampedPosition.x !== currentTarget.x || clampedPosition.z !== currentTarget.z) {
+      this.controls.target.set(clampedPosition.x, currentTarget.y, clampedPosition.z)
+    }
+
     // Animate city lights with flickering effect
     if (this.cityLights) {
       animateCityLights(this.cityLights, elapsed)
@@ -406,6 +449,63 @@ export class HelsinkiScene {
     return this.cinematicAnimation?.isPlaying ?? false
   }
 
+  /**
+   * Log camera debug information for development
+   * Shows position, distance from target, viewing angle, and rotation
+   */
+  private logCameraDebugInfo(): void {
+    const pos = this.camera.position
+    const target = this.controls.target || new THREE.Vector3(0, 0, 0)
+    
+    // Calculate distance from camera to target
+    const distance = pos.distanceTo(target)
+    
+    // Calculate height (Y position)
+    const height = pos.y
+    
+    // Calculate horizontal angle (azimuth) in degrees
+    const dx = pos.x - target.x
+    const dz = pos.z - target.z
+    const azimuthRad = Math.atan2(dz, dx)
+    const azimuthDeg = THREE.MathUtils.radToDeg(azimuthRad)
+    
+    // Calculate vertical angle (elevation/pitch) in degrees
+    const horizontalDist = Math.sqrt(dx * dx + dz * dz)
+    const dy = pos.y - target.y
+    const elevationRad = Math.atan2(dy, horizontalDist)
+    const elevationDeg = THREE.MathUtils.radToDeg(elevationRad)
+    
+    // Get camera rotation in degrees
+    const rotX = THREE.MathUtils.radToDeg(this.camera.rotation.x)
+    const rotY = THREE.MathUtils.radToDeg(this.camera.rotation.y)
+    const rotZ = THREE.MathUtils.radToDeg(this.camera.rotation.z)
+    
+    console.log('📷 CAMERA DEBUG INFO:')
+    console.log('   Position:', {
+      x: Math.round(pos.x),
+      y: Math.round(pos.y),
+      z: Math.round(pos.z)
+    })
+    console.log('   Target:', {
+      x: Math.round(target.x),
+      y: Math.round(target.y),
+      z: Math.round(target.z)
+    })
+    console.log('   Distance from target:', Math.round(distance))
+    console.log('   Height (Y):', Math.round(height))
+    console.log('   Angles:', {
+      azimuth: Math.round(azimuthDeg) + '°',
+      elevation: Math.round(elevationDeg) + '°'
+    })
+    console.log('   Camera Rotation:', {
+      x: Math.round(rotX) + '°',
+      y: Math.round(rotY) + '°',
+      z: Math.round(rotZ) + '°'
+    })
+    console.log('   FOV:', this.camera.fov + '°')
+    console.log('   ---')
+  }
+
   public dispose(): void {
     window.removeEventListener('resize', this.onWindowResize.bind(this))
     this.controls.dispose()
@@ -458,6 +558,106 @@ export class HelsinkiScene {
     this.pencilStrength = Math.max(0, Math.min(1, strength))
   }
 
+  /**
+   * Manually log camera debug info
+   * Call from console: window.helsinkiScene.debugCamera()
+   */
+  public debugCamera(): void {
+    this.logCameraDebugInfo()
+  }
+
+  /**
+   * Set camera to a specific configuration
+   * @param config - Camera configuration object
+   * @example
+   * window.helsinkiScene.setCameraConfig({
+   *   targetX: 164, targetY: 50, targetZ: -804,
+   *   polar: { distance: 500, azimuth: 90, elevation: 15 }
+   * })
+   */
+  public setCameraConfig(config: CameraConfig): void {
+    applyCameraConfig(this.camera, this.controls, config)
+  }
+
+  /**
+   * Apply a preset camera configuration
+   * @param presetName - Name of the preset from CAMERA_PRESETS
+   * @example
+   * window.helsinkiScene.applyCameraPreset('BIRDS_EYE')
+   */
+  public applyCameraPreset(presetName: keyof typeof CAMERA_PRESETS): void {
+    const preset = CAMERA_PRESETS[presetName]
+    if (preset) {
+      applyCameraConfig(this.camera, this.controls, preset)
+    } else {
+      console.error(`Camera preset "${presetName}" not found`)
+    }
+  }
+
+  /**
+   * Get current camera configuration
+   * Returns a config object you can copy/paste into code
+   * @example
+   * window.helsinkiScene.getCameraConfig()
+   */
+  public getCameraConfig(): CameraConfig {
+    return getCurrentCameraConfig(this.camera, this.controls)
+  }
+
+  /**
+   * Print current camera config as copyable code
+   * @example
+   * window.helsinkiScene.printCameraConfig()
+   */
+  public printCameraConfig(): void {
+    const config = getCurrentCameraConfig(this.camera, this.controls)
+    console.log('📷 CURRENT CAMERA CONFIG (copy/paste ready):')
+    console.log(formatCameraConfigAsCode(config))
+  }
+
+  /**
+   * Get list of available Points of Interest
+   */
+  public getPOIs(): typeof POINTS_OF_INTEREST {
+    return POINTS_OF_INTEREST
+  }
+
+  /**
+   * Get list of available camera presets
+   */
+  public getCameraPresets(): typeof CAMERA_PRESETS {
+    return CAMERA_PRESETS
+  }
+
+  /**
+   * Move camera to look at a specific POI
+   * @param poiName - Name of the POI from POINTS_OF_INTEREST
+   * @param distance - Optional distance from POI (default: 500)
+   * @param azimuth - Optional horizontal angle in degrees (default: 90)
+   * @param elevation - Optional vertical angle in degrees (default: 15)
+   * @example
+   * window.helsinkiScene.focusPOI('FOUNDERS_HOUSE', 800, 135, 20)
+   */
+  public focusPOI(
+    poiName: keyof typeof POINTS_OF_INTEREST,
+    distance: number = 500,
+    azimuth: number = 90,
+    elevation: number = 15
+  ): void {
+    const poi = POINTS_OF_INTEREST[poiName]
+    if (poi) {
+      const config: CameraConfig = {
+        targetX: poi.worldCoords.x,
+        targetY: poi.worldCoords.y,
+        targetZ: poi.worldCoords.z,
+        polar: { distance, azimuth, elevation }
+      }
+      applyCameraConfig(this.camera, this.controls, config)
+      console.log(`📍 Focused on ${poi.name} at (${poi.mapCoords.x}, ${poi.mapCoords.y})`)
+    } else {
+      console.error(`POI "${poiName}" not found`)
+    }
+  }
 
   // Toggle between day and night mode
   public toggleDayNightMode(forceNightMode: boolean) {

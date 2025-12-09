@@ -39,7 +39,7 @@ export function createIdleRotation(
     startTime: elapsedTime,
     pausedTime: 0,
     accumulatedTime: 0,
-    rotationSpeed: -(Math.PI * 1) / 100, // Full 360° rotation in 100 seconds (60% slower, negative for reverse direction)
+    rotationSpeed: -(Math.PI * 1) / 120, // Very slow rotation (360° in 120 seconds) - centralized config
     center: lookAtPoint.clone(),
     initialOffset: offset.clone(),
     radius,

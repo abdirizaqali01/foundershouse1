@@ -20,6 +20,12 @@ export class HelsinkiCameraController {
   public minDistance: number = 100
   public maxDistance: number = 50000
   public maxPolarAngle: number = Math.PI / 2
+  public minPolarAngle: number = 0
+  public minAzimuthAngle: number = -Infinity
+  public maxAzimuthAngle: number = Infinity
+  public rotateSpeed: number = 1.0
+  public zoomSpeed: number = 1.0
+  public panSpeed: number = 1.0
   public target: THREE.Vector3 = new THREE.Vector3(0, 0, 0)
   private userInteracting: boolean = false
 
@@ -38,6 +44,12 @@ export class HelsinkiCameraController {
     this.orbit.minDistance = this.minDistance
     this.orbit.maxDistance = this.maxDistance
     this.orbit.maxPolarAngle = this.maxPolarAngle
+    this.orbit.minPolarAngle = this.minPolarAngle
+    this.orbit.minAzimuthAngle = this.minAzimuthAngle
+    this.orbit.maxAzimuthAngle = this.maxAzimuthAngle
+    this.orbit.rotateSpeed = this.rotateSpeed
+    this.orbit.zoomSpeed = this.zoomSpeed
+    this.orbit.panSpeed = this.panSpeed
     this.orbit.target.copy(this.target)
 
     // Listen for user interaction events
@@ -59,6 +71,36 @@ export class HelsinkiCameraController {
 
   public resetInteractionFlag(): void {
     this.userInteracting = false
+  }
+
+  /**
+   * Sync properties from this controller to the underlying OrbitControls
+   * Call this after changing any camera restriction properties
+   */
+  private syncPropertiesToOrbit(): void {
+    if (this.orbit) {
+      // Basic properties
+      this.orbit.enableDamping = this.enableDamping
+      this.orbit.dampingFactor = this.dampingFactor
+      this.orbit.screenSpacePanning = this.screenSpacePanning
+      
+      // Speed limits - prevents spinning too fast
+      this.orbit.rotateSpeed = this.rotateSpeed
+      this.orbit.zoomSpeed = this.zoomSpeed
+      this.orbit.panSpeed = this.panSpeed
+      
+      // Distance constraints (zoom)
+      this.orbit.minDistance = this.minDistance
+      this.orbit.maxDistance = this.maxDistance
+      
+      // Vertical angle constraints (elevation) - prevents looking too far up or down
+      this.orbit.maxPolarAngle = this.maxPolarAngle
+      this.orbit.minPolarAngle = this.minPolarAngle
+      
+      // NO horizontal angle constraints - allow full 360° rotation
+      this.orbit.minAzimuthAngle = -Infinity
+      this.orbit.maxAzimuthAngle = Infinity
+    }
   }
 
   /**
@@ -133,6 +175,8 @@ export class HelsinkiCameraController {
       }
     } else if (this.orbit) {
       try {
+        // Ensure constraints are enforced on every update
+        this.syncPropertiesToOrbit()
         this.orbit.update()
       } catch (err) {
         // ignore orbit update errors

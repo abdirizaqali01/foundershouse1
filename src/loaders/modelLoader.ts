@@ -66,7 +66,7 @@ export async function loadHelsinkiModel(params: LoadParams): Promise<THREE.Group
             const isBuilding = size.y > 10 // Buildings have vertical height > 10 units
 
             const isRedMode = renderMode === 'textured-red' || renderMode === 'no-texture-red'
-            const buildingOpacity = isRedMode ? 0.45 : 0.45
+            const buildingOpacity = isRedMode ? 0.65 : 0.65 // 65% opacity
 
             if (renderMode === 'wireframe') {
               // Wireframe mode - buildings with heavily reduced edge lines only

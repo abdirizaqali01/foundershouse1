@@ -1,6 +1,6 @@
 /**
  * Helpers Module  
- * Utility functions: geometry operations, time utilities, procedural generation
+ * Utility functions: geometry operations, time utilities, procedural generation, camera utilities
  */
 
 export {
@@ -19,3 +19,13 @@ export {
 export {
   PerlinNoiseGenerator
 } from './perlinNoise'
+
+export {
+  type CameraConfig,
+  CAMERA_PRESETS,
+  polarToCartesian,
+  cartesianToPolar,
+  applyCameraConfig,
+  getCurrentCameraConfig,
+  formatCameraConfigAsCode
+} from './cameraUtils'

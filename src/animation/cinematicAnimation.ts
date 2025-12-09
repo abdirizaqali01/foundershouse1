@@ -77,6 +77,8 @@ export interface CinematicAnimationConfig {
   buildingY: number
   startDistance: number
   endDistance: number
+  endAzimuth: number      // End horizontal angle in degrees
+  endElevation: number    // End vertical angle in degrees
   startAngle: number
   rotationAngle: number
   duration: number
@@ -98,9 +100,12 @@ export function createCinematicAnimation(
     buildingZ = 0,     // The building coordinates (center of world)
     buildingY = 0,
     startDistance = 3000,
-    endDistance = 800, // Increased from 380 to keep building centered (further back = better framing)
-    startAngle = Math.PI * 0.25, // 45 degrees from the side
-    rotationAngle = Math.PI * 0.25, // Rotate 45 degrees (π/4 radians)
+    // End camera settings based on desired final view:
+    // Distance: ~1000 units, Azimuth: -136° (224°), Elevation: 10°, Height: 182
+    endDistance = 1000,    // Distance from focal point
+    endAzimuth = -136,     // Horizontal angle in degrees (-136° = 224° from east)
+    endElevation = 10,     // Vertical angle (10° looking down)
+    startAngle = Math.PI * 0.25, // 45 degrees from the side (starting position)
     duration = 5.0, // 5 seconds - slower, more cinematic
   } = config
 
@@ -111,19 +116,21 @@ export function createCinematicAnimation(
     buildingZ + Math.sin(startAngle) * startDistance
   )
 
-  // Calculate ending position (rotated 45 degrees from start)
-  const endAngle = startAngle + rotationAngle
-  // End height: positioned to look slightly down at the building
-  const endHeight = buildingY + 150 // Raised to give nice elevated perspective
-  const endPosition = new THREE.Vector3(
-    buildingX + Math.cos(endAngle) * endDistance,
-    endHeight,
-    buildingZ + Math.sin(endAngle) * endDistance
-  )
+  // Calculate ending position using polar coordinates (azimuth, elevation, distance)
+  // Convert angles to radians
+  const endAzimuthRad = THREE.MathUtils.degToRad(endAzimuth)
+  const endElevationRad = THREE.MathUtils.degToRad(endElevation)
+  
+  // Calculate position in spherical coordinates
+  const horizontalDistance = endDistance * Math.cos(endElevationRad)
+  const endX = buildingX + horizontalDistance * Math.cos(endAzimuthRad)
+  const endZ = buildingZ + horizontalDistance * Math.sin(endAzimuthRad)
+  const endY = buildingY + endDistance * Math.sin(endElevationRad)
+  
+  const endPosition = new THREE.Vector3(endX, endY, endZ)
 
-  // Simple lookAt: point directly at the building with a slight elevation
-  // This ensures the building stays perfectly centered in frame
-  const lookAtPoint = new THREE.Vector3(buildingX, buildingY + 50, buildingZ)
+  // Look at point: slightly elevated above the building for better framing
+  const lookAtPoint = new THREE.Vector3(buildingX, buildingY + 20, buildingZ)
 
   return {
     duration,

@@ -236,7 +236,8 @@ export class HelsinkiScene {
 
 
   private addBackgroundText(): void {
-
+    // Temporarily disabled - uncomment to re-enable background text
+    /*
     const loader = new FontLoader()
 
     // Load font for background text
@@ -276,6 +277,7 @@ export class HelsinkiScene {
         // Error loading font
       }
     )
+    */
   }
 
   private onWindowResize(): void {

@@ -9,7 +9,7 @@ import * as THREE from 'three'
 export const COLORS = {
   // Day Mode Colors
   day: {
-    sky: 0xf0efe6,        // Light beige background
+    sky: 0xfff8f2,        // Cream background (#FFF8F2)
     wireframe: 0x2b0a05,   // Dark brown wireframe
     wireframeOpacity: 0.35, // Day wireframe opacity
   },
@@ -137,7 +137,7 @@ export const ANIMATION = {
 // Fog Configuration
 export const FOG = {
   near: 750,
-  far: 1750,
+  far: 1450,
   colors: {
     day: 0xFFF8F2,
     night: 0x0a0a15,

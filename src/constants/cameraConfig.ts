@@ -46,7 +46,7 @@ export const CAMERA_RESTRICTIONS = {
   // Distance constraints (zoom)
   distance: {
     min: 700,           // Closest zoom (70% of base) - prevents seeing too much detail
-    max: 1500,          // Furthest zoom (150% of base) - keeps focal point visible
+    max: 1000,          // Furthest zoom (150% of base) - keeps focal point visible
     default: 1007       // Base distance
   },
   

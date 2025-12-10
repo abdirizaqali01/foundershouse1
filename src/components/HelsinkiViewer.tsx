@@ -20,7 +20,7 @@ export const HelsinkiViewer = () => {
   const [modelLoaded, setModelLoaded] = useState<boolean>(false)
   const [isDemoNightMode, setIsDemoNightMode] = useState<boolean>(false)
   const [isAdvancedCamera, setIsAdvancedCamera] = useState<boolean>(false)
-  const [renderMode, setRenderMode] = useState<RenderMode>('textured')
+  const [renderMode, setRenderMode] = useState<RenderMode>('textured-red')
 
   useEffect(() => {
     if (!containerRef.current) return

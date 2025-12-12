@@ -702,8 +702,9 @@ export class HelsinkiCameraController {
     this.camera.getWorldDirection(right);
     right.crossVectors(up, right).normalize();
     const offset = new THREE.Vector3();
-    offset.addScaledVector(right, this.parallaxOffsetX);
-    offset.addScaledVector(up, this.parallaxOffsetY);
+    // Invert the parallax directions
+    offset.addScaledVector(right, -this.parallaxOffsetX);
+    offset.addScaledVector(up, -this.parallaxOffsetY);
     const intended = this.baseCameraPosition.clone().add(offset);
     this.cameraTargetPosition.x += (intended.x - this.cameraTargetPosition.x) * this.cameraLerpAlpha;
     this.cameraTargetPosition.y += (intended.y - this.cameraTargetPosition.y) * this.cameraLerpAlpha;

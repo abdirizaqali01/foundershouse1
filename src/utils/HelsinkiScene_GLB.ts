@@ -61,6 +61,9 @@ export class HelsinkiScene {
   public revealProgress: number = 0
   public pencilStrength: number = 1.0
 
+  // Store model bounding box for camera limits
+  private modelBoundingBox: THREE.Box3 | null = null
+
   constructor(config: SceneConfig) {
     this.container = config.container
     this.clock = new THREE.Clock()
@@ -132,7 +135,6 @@ export class HelsinkiScene {
     // Load Helsinki GLB model (delegated to modelLoader)
     loadModel({
       modelPath: '/newest_model.glb',
-      // modelPath: '/test.glb', // Test map - commented out
       scene: this.scene,
       camera: this.camera,
       controls: this.controls,
@@ -143,6 +145,27 @@ export class HelsinkiScene {
     }).then((model) => {
       this.helsinkiModel = model
       console.log('✅ Helsinki model loaded successfully')
+
+      // Compute tight bounding box in world coordinates
+      if (model) {
+        model.updateWorldMatrix(true, true)
+        const box = new THREE.Box3().setFromObject(model)
+        this.modelBoundingBox = box
+        // Pass bounding box to camera controller if method exists
+        if (typeof this.controls.setBoundingBox === 'function') {
+          this.controls.setBoundingBox(box)
+        }
+        // Force camera to start inside bounding box (centered, above model)
+        const center = box.getCenter(new THREE.Vector3())
+        const size = box.getSize(new THREE.Vector3())
+        // Place camera above center, looking at center
+        this.camera.position.set(center.x, center.y + Math.max(500, size.y * 1.5), center.z + Math.max(500, size.z * 0.7))
+        this.camera.lookAt(center)
+        if (this.controls.setTarget) {
+          this.controls.setTarget(center.x, center.y, center.z)
+        }
+      }
+
       // After the helsinkiModel reference is set, generate city lights if night mode
       if (this.isNightMode) {
         console.log('🌙 Night mode active - adding city lights...')

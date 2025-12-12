@@ -21,7 +21,7 @@ export const CAMERA_BASE = {
   // Ideal camera position
   position: {
     x: -105,
-    y: 182,
+    y: 250,
     z: -1040
   },
   
@@ -46,8 +46,8 @@ export const CAMERA_RESTRICTIONS = {
   // Distance constraints (zoom)
   distance: {
     min: 700,           // Closest zoom (70% of base) - prevents seeing too much detail
-    max: 1000,          // Furthest zoom (150% of base) - keeps focal point visible
-    default: 1007       // Base distance
+    max: 900,          // Furthest zoom (150% of base) - keeps focal point visible
+    default: 900       // Base distance
   },
   
   // Azimuth (horizontal rotation) constraints
@@ -66,9 +66,9 @@ export const CAMERA_RESTRICTIONS = {
   
   // Height constraints (Y position) - TIGHT control for narrative
   height: {
-    min: 160,           // Minimum height - only 22 units below base (182)
-    max: 220,           // Maximum height - only 38 units above base (182)
-    default: 182        // Base height
+    min: 220,           // Minimum height
+    max: 300,           // Maximum height
+    default: 250        // Base height (raised)
   },
   
   // FOV constraints

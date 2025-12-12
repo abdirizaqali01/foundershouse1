@@ -11,7 +11,7 @@ import HelsinkiCameraController from './HelsinkiCameraController'
 import { loadHelsinkiModel as loadModel, type RenderMode } from '../loaders'
 import { setupPostProcessing, setupComposer, setupSceneLighting } from '../rendering'
 import { addCityLights, addCityLightsPoints, animateCityLights, removeCityLights, updateCityLightsFog, createStarfield, animateStars, setupSceneFog, updateFogColor } from '../effects'
-import { createCinematicAnimation, updateCinematicAnimation, getAnimationProgress, cinematicEaseOut, type CinematicAnimationState, createIdleRotation, updateIdleRotation, type IdleRotationState } from '../animation'
+// Animation imports removed
 import { PerlinNoiseGenerator, isNightInHelsinki, updateMaterialsInHierarchy, isLineSegmentsWithBasicMaterial, applyCameraConfig, getCurrentCameraConfig, formatCameraConfigAsCode, CAMERA_PRESETS, type CameraConfig } from '../helpers'
 import { COLORS, FOG, FONTS, CITY_LIGHTS } from '../constants/designSystem'
 import { CAMERA_BASE, CAMERA_RESTRICTIONS, CAMERA_DAMPING, CAMERA_SPEED_LIMITS } from '../constants/cameraConfig'
@@ -45,8 +45,7 @@ export class HelsinkiScene {
   private backgroundText: THREE.Mesh | null = null
   private stars: THREE.Group | THREE.Points | null = null
   private isNightMode: boolean
-  private cinematicAnimation: CinematicAnimationState | null = null
-  private idleRotation: IdleRotationState | null = null
+  // Animation fields removed
   private fog: THREE.Fog | null = null
 
   // Animation state
@@ -66,15 +65,30 @@ export class HelsinkiScene {
       ? new THREE.Color(COLORS.night.sky)  // Dark night sky
       : new THREE.Color(COLORS.day.sky)  // Light beige day sky
 
-    // Setup camera
+    // Setup camera with initial position from config
     this.camera = new THREE.PerspectiveCamera(
-      60,
+      CAMERA_BASE.fov,
       window.innerWidth / window.innerHeight,
-      1,
-      100000
+      CAMERA_BASE.near,
+      CAMERA_BASE.far
     )
-    this.camera.position.set(0, 5000, 10000)
-    this.camera.lookAt(0, 0, 0)
+    // Set camera to configured starting position
+    this.camera.position.set(
+      CAMERA_BASE.position.x,
+      CAMERA_BASE.position.y,
+      CAMERA_BASE.position.z
+    )
+    this.camera.lookAt(
+      CAMERA_BASE.target.x,
+      CAMERA_BASE.target.y,
+      CAMERA_BASE.target.z
+    )
+    
+    // Debug: Log initial camera setup
+    console.log('📷 CAMERA INITIAL SETUP:')
+    console.log('   Position:', CAMERA_BASE.position)
+    console.log('   Target:', CAMERA_BASE.target)
+    console.log('   Actual camera.position:', this.camera.position.toArray())
 
     // Setup renderer
     this.renderer = new THREE.WebGLRenderer({ antialias: true })
@@ -89,6 +103,13 @@ export class HelsinkiScene {
   this.controls.enableDamping = CAMERA_DAMPING.enabled
   this.controls.dampingFactor = CAMERA_DAMPING.factor
   this.controls.screenSpacePanning = false
+  
+  // Set the controls target to the configured target point (syncs to OrbitControls)
+  this.controls.setTarget(
+    CAMERA_BASE.target.x,
+    CAMERA_BASE.target.y,
+    CAMERA_BASE.target.z
+  )
   
   // Speed limits - prevents spinning too fast
   this.controls.rotateSpeed = CAMERA_SPEED_LIMITS.rotateSpeed
@@ -145,12 +166,9 @@ export class HelsinkiScene {
   // Lighting (moved to lighting utility)
   setupSceneLighting(this.scene)
 
-    // Setup fog (but disable it initially during cinematic)
+    // Setup fog and enable it immediately (no animation)
     this.fog = setupSceneFog(this.scene, this.isNightMode)
-    // Disable fog initially - will enable after cinematic
-    if (this.fog) {
-      this.scene.fog = null
-    }
+    // Fog is already attached to scene by setupSceneFog
 
     // Add starfield only for night mode (stars util)
     if (this.isNightMode) {
@@ -173,30 +191,6 @@ export class HelsinkiScene {
       onLoadComplete: config.onLoadComplete,
     }).then((model) => {
       this.helsinkiModel = model
-      
-      // Use centralized POI configuration for Founders House
-      const poi = FOUNDERS_HOUSE_POI
-      const focusX = poi.worldCoords.x
-      const focusY = poi.worldCoords.y
-      const focusZ = poi.worldCoords.z
-      
-      // Create cinematic animation with POI coordinates and camera restrictions
-      const newConfig = createCinematicAnimation({
-        buildingX: focusX,
-        buildingZ: focusZ,
-        buildingY: focusY,
-        endDistance: CAMERA_BASE.polar.distance,
-        endAzimuth: CAMERA_BASE.polar.azimuth,
-        endElevation: CAMERA_BASE.polar.elevation,
-      })
-      
-      // Create or update animation state with custom coordinates
-      // Don't start playing yet - wait for playIntroAnimation() call
-      this.cinematicAnimation = {
-        ...newConfig,
-        isPlaying: false,  // Will be set to true by playIntroAnimation()
-        startTime: 0,      // Will be set by playIntroAnimation()
-      }
       
       // After the helsinkiModel reference is set, generate city lights if night mode
       if (this.isNightMode) {
@@ -309,81 +303,6 @@ export class HelsinkiScene {
     const elapsed = this.clock.getElapsedTime()
     const delta = this.clock.getDelta()
 
-    // Update cinematic animation if playing
-    if (this.cinematicAnimation && this.cinematicAnimation.isPlaying) {
-      const progress = getAnimationProgress(this.cinematicAnimation, elapsed)
-      
-      // Start idle rotation 1 second before end (at 4 seconds of 5 second animation = 80%)
-      // The slow rotation speed matches the cinematic's deceleration perfectly
-      if (progress >= 0.80 && !this.idleRotation) {
-        // Use the same focus point as cinematic - the building we're revolving around
-        const focusPoint = this.cinematicAnimation.targetLookAt.clone()
-        this.idleRotation = createIdleRotation(this.camera, focusPoint, elapsed)
-      }
-      
-      // Continue cinematic animation until idle rotation takes over
-      // Stop cinematic once we're past 98% to hand control to idle rotation
-      if (progress < 0.98) {
-        const stillPlaying = updateCinematicAnimation(
-          this.cinematicAnimation,
-          this.camera,
-          this.controls,
-          elapsed,
-          delta
-        )
-        
-        // If animation stopped naturally, mark as not playing
-        if (!stillPlaying) {
-          this.cinematicAnimation.isPlaying = false
-        }
-      } else {
-        // At 98%, hand off to idle rotation completely
-        this.cinematicAnimation.isPlaying = false
-        
-        // Ensure fog is at final values
-        if (this.fog) {
-          this.fog.near = FOG.near
-          this.fog.far = FOG.far
-          this.scene.fog = this.fog
-        }
-      }
-      
-      // Gradually fade in fog using the same cinematic easing as the camera animation
-      if (this.fog) {
-        // Apply the same cinematic ease-out curve to fog for synchronized animation
-        const easedProgress = cinematicEaseOut(progress)
-        
-        // Interpolate fog distances from very far (no fog) to normal distances
-        const finalNear = FOG.near
-        const finalFar = FOG.far
-        const startNear = 50000
-        const startFar = 100000
-        
-        this.fog.near = startNear + (finalNear - startNear) * easedProgress
-        this.fog.far = startFar + (finalFar - startFar) * easedProgress
-        
-        // Make sure fog is attached to scene
-        if (this.scene.fog !== this.fog) {
-          this.scene.fog = this.fog
-        }
-      }
-    }
-
-    // Update idle rotation if active
-    if (this.idleRotation && this.idleRotation.isActive) {
-      const stillRotating = updateIdleRotation(
-        this.idleRotation,
-        this.camera,
-        this.controls,
-        elapsed
-      )
-
-      // If rotation stopped (user interaction), mark as inactive
-      if (!stillRotating) {
-        this.idleRotation.isActive = false
-      }
-    }
-
     // Update controls (pass delta for camera-controls; wrapper handles both)
     this.controls.update(delta)
 
@@ -425,30 +344,17 @@ export class HelsinkiScene {
   }
 
   /**
-   * Play the intro cinematic animation
-   * Smoothly zooms and rotates camera with asymptotic deceleration (never fully stops)
+   * Play the intro animation (disabled)
    */
   public playIntroAnimation(): void {
-    // If animation config exists (with custom coordinates), just start it
-    if (this.cinematicAnimation) {
-      this.cinematicAnimation.isPlaying = true
-      this.cinematicAnimation.startTime = this.clock.getElapsedTime()
-      return
-    }
-
-    // Fallback: create default animation if none exists
-    this.cinematicAnimation = {
-      isPlaying: true,
-      startTime: this.clock.getElapsedTime(),
-      ...createCinematicAnimation(),
-    }
+    // Animation disabled
   }
 
   /**
-   * Check if cinematic animation is currently playing (including idle rotation)
+   * Check if cinematic animation is currently playing
    */
   public isCinematicAnimationPlaying(): boolean {
-    return this.cinematicAnimation?.isPlaying ?? false
+    return false
   }
 
   /**

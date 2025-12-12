@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+import { clampToMapBounds } from '../constants/mapBoundaries'
 
 /**
  * Super smooth ease-out using quartic (power of 4)
@@ -14,6 +15,15 @@ function easeOutQuart(t: number): number {
  * Keeps a stable API used by HelsinkiScene: update(delta?), target, dispose, setLookAt, fitToBox, flyTo
  */
 export class HelsinkiCameraController {
+    // Optional bounding box for camera limits
+    private boundingBox: THREE.Box3 | null = null
+
+    /**
+     * Set the bounding box for camera movement limits
+     */
+    public setBoundingBox(box: THREE.Box3) {
+      this.boundingBox = box.clone()
+    }
   private camera: THREE.PerspectiveCamera
   private domElement: HTMLElement
   private orbit: OrbitControls | null = null
@@ -48,8 +58,8 @@ export class HelsinkiCameraController {
   // Hybrid drag settings (rotation + pan)
   private horizontalDragEnabled: boolean = true
   private isDragging: boolean = false
-  private panSensitivity: number = 0.8 // Forward/back pan speed (vertical drag)
-  private rotateSensitivity: number = 0.004 // Rotation speed (horizontal drag) - radians per pixel
+  private panSensitivity: number = 0.5 // Forward/back pan speed (vertical drag)
+  private rotateSensitivity: number = 0.002 // Rotation speed (horizontal drag) - radians per pixel
   
   // Momentum/inertia settings for smooth easing
   private velocity: THREE.Vector3 = new THREE.Vector3()
@@ -59,13 +69,32 @@ export class HelsinkiCameraController {
   private rotationThreshold: number = 0.0001 // Stop rotation when below this
   private smoothingFactor: number = 0.15 // How much new input affects velocity (lower = smoother)
 
+  // --- Parallax effect state ---
+  private mouseParallaxActive = true;
+  private mouseNormalizedX = 0;
+  private mouseNormalizedY = 0;
+  private parallaxOffsetX = 0;
+  private parallaxOffsetY = 0;
+  private parallaxStrength = 30; // units
+  private parallaxEasing = 0.04;
+  private baseCameraPosition: THREE.Vector3 = new THREE.Vector3();
+
+  // --- Smoothed camera state ---
+  private cameraTargetPosition: THREE.Vector3 = new THREE.Vector3();
+  private desiredCameraPosition: THREE.Vector3 = new THREE.Vector3();
+  private cameraLerpAlpha: number = 0.08; // Lower = smoother
+
   // internal clock for delta when needed
   private _last = performance.now()
+
+  // Add a new property for the drag target position
+  private dragTargetPosition: THREE.Vector3 = new THREE.Vector3();
 
   constructor(camera: THREE.PerspectiveCamera, domElement: HTMLElement) {
     this.camera = camera
     this.domElement = domElement
-
+    
+    // Initialize base camera position from actual camera position
     // Start with OrbitControls as a safe default
     this.orbit = new OrbitControls(this.camera, this.domElement)
     this.orbit.enableDamping = this.enableDamping
@@ -94,6 +123,15 @@ export class HelsinkiCameraController {
     // Store base speeds
     this.baseZoomSpeed = this.zoomSpeed
     this.baseRotateSpeed = this.rotateSpeed
+
+    // Add mousemove listener for parallax effect (only once)
+    this.baseCameraPosition.copy(camera.position);
+    this.domElement.addEventListener('mousemove', this._handleParallaxMouseMove);
+    this.domElement.addEventListener('mouseleave', this._handleParallaxMouseLeave);
+    // In constructor, initialize dragTargetPosition
+    this.dragTargetPosition.copy(this.camera.position);
+    // In constructor, initialize desiredCameraPosition
+    this.desiredCameraPosition.copy(this.camera.position);
   }
 
   /**
@@ -199,7 +237,7 @@ export class HelsinkiCameraController {
     
     // Calculate easing factors for each constraint
     const zoomEasing = deltaZoom !== 0 
-      ? this.calculateZoomEasing(deltaZoom > 0) 
+      ? this.calculateZoomEasing(zoomingIn) 
       : 1.0
     
     const polarEasing = deltaY !== 0 
@@ -243,14 +281,11 @@ export class HelsinkiCameraController {
    * Both have smooth momentum/easing
    */
   private handlePointerMoveWithEasing = (event: PointerEvent): void => {
-    if (!this.orbit) return
-    
-    const deltaX = event.clientX - this.lastMouseX
-    const deltaY = event.clientY - this.lastMouseY
-    this.lastMouseX = event.clientX
-    this.lastMouseY = event.clientY
-    
-    // Only apply movement during drag (when left mouse button is pressed)
+    if (!this.orbit) return;
+    const deltaX = event.clientX - this.lastMouseX;
+    const deltaY = event.clientY - this.lastMouseY;
+    this.lastMouseX = event.clientX;
+    this.lastMouseY = event.clientY;
     if (this.isDragging && event.buttons === 1 && this.horizontalDragEnabled) {
       // Get camera direction vectors for panning
       const cameraDirection = new THREE.Vector3()
@@ -265,38 +300,49 @@ export class HelsinkiCameraController {
       // === ROTATION (horizontal drag) ===
       // Calculate target rotation velocity
       // Positive deltaX (drag right) should rotate clockwise (negative angle around Y)
-      const targetRotationVelocity = deltaX * this.rotateSensitivity
-      
-      // Smooth interpolation for rotation
+      let rotationEasing = 1.0
+      let panEasing = 1.0
+      if (this.boundingBox) {
+        // Easing for rotation: slow down as camera approaches bounding box edge (X/Z)
+        const margin = 40 // units for soft edge
+        const box = this.boundingBox
+        // For X axis
+        const distToMinX = Math.abs(this.camera.position.x - box.min.x)
+        const distToMaxX = Math.abs(this.camera.position.x - box.max.x)
+        const tX = Math.min(distToMinX, distToMaxX) / margin
+        // For Z axis
+        const distToMinZ = Math.abs(this.camera.position.z - box.min.z)
+        const distToMaxZ = Math.abs(this.camera.position.z - box.max.z)
+        const tZ = Math.min(distToMinZ, distToMaxZ) / margin
+        // Use the minimum t for strongest edge effect
+        const t = Math.max(0, Math.min(1, Math.min(tX, tZ)))
+        panEasing = easeOutQuart(t)
+        rotationEasing = easeOutQuart(t)
+      }
+
+      // Apply easing to rotation and pan
+      const targetRotationVelocity = deltaX * this.rotateSensitivity * rotationEasing
       this.rotationVelocity = this.rotationVelocity + (targetRotationVelocity - this.rotationVelocity) * this.smoothingFactor
-      
+
       // Rotate camera in place - pivot around camera position, not target
-      // Get offset from camera to target
       const offsetToTarget = this.orbit.target.clone().sub(this.camera.position)
-      
-      // Rotate the target around the camera (Y axis)
       offsetToTarget.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.rotationVelocity)
-      
-      // Apply new target position (camera stays in place)
       this.orbit.target.copy(this.camera.position).add(offsetToTarget)
       this.target.copy(this.orbit.target)
       this.camera.lookAt(this.orbit.target)
-      
+
       // === PAN (vertical drag) ===
-      // Calculate target pan velocity (forward/back)
-      const targetPanZ = deltaY * this.panSensitivity
-      
-      // Calculate target velocity vector (only forward/back)
+      const targetPanZ = deltaY * this.panSensitivity * panEasing
       const targetVelocity = new THREE.Vector3()
       targetVelocity.addScaledVector(forward, targetPanZ)
-      
-      // Smooth interpolation towards target velocity
       this.velocity.lerp(targetVelocity, this.smoothingFactor)
-      
-      // Apply smoothed pan movement to both camera and target
-      this.camera.position.add(this.velocity)
+      // In handlePointerMoveWithEasing, update dragTargetPosition instead of camera.position directly
+      this.dragTargetPosition.add(this.velocity)
       this.orbit.target.add(this.velocity)
       this.target.copy(this.orbit.target)
+
+      // Clamp camera position to map boundaries
+      this.clampToMapBoundaries()
     } else if (event.buttons > 0 && this.softBoundaryEnabled) {
       // Apply boundary easing for other controls
       this.applyBoundaryEasing(deltaX, deltaY, 0)
@@ -310,21 +356,26 @@ export class HelsinkiCameraController {
    */
   public applyMomentum(): void {
     if (!this.orbit || this.isDragging) return
-    
+
+    // Debug: log momentum state
+    if (window && (window as any).DEBUG_PARALLAX) {
+      console.log('[Momentum] rotationVelocity:', this.rotationVelocity, 'rotationThreshold:', this.rotationThreshold, 'velocity:', this.velocity.length(), 'velocityThreshold:', this.velocityThreshold);
+    }
+
     // === ROTATION MOMENTUM ===
     if (Math.abs(this.rotationVelocity) > this.rotationThreshold) {
       // Rotate camera in place - pivot around camera position, not target
       // Get offset from camera to target
       const offsetToTarget = this.orbit.target.clone().sub(this.camera.position)
-      
+
       // Rotate the target around the camera (Y axis)
       offsetToTarget.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.rotationVelocity)
-      
+
       // Apply new target position (camera stays in place)
       this.orbit.target.copy(this.camera.position).add(offsetToTarget)
       this.target.copy(this.orbit.target)
       this.camera.lookAt(this.orbit.target)
-      
+
       // Apply friction to rotation
       this.rotationVelocity *= this.friction
     } else {
@@ -337,12 +388,48 @@ export class HelsinkiCameraController {
       this.camera.position.add(this.velocity)
       this.orbit.target.add(this.velocity)
       this.target.copy(this.orbit.target)
-      
+
       // Apply friction (ease out)
       this.velocity.multiplyScalar(this.friction)
     } else {
       // Stop completely when below threshold
       this.velocity.set(0, 0, 0)
+    }
+    
+    // Clamp camera to map boundaries
+    this.clampToMapBoundaries()
+  }
+
+  /**
+   * Clamp camera and target positions to map boundaries
+   */
+  private clampToMapBoundaries(): void {
+    if (!this.orbit) return
+
+    // Use bounding box if set, otherwise fallback to static map boundaries
+    const box = this.boundingBox
+    if (box) {
+      // Clamp camera position
+      this.camera.position.x = Math.max(box.min.x, Math.min(box.max.x, this.camera.position.x))
+      this.camera.position.z = Math.max(box.min.z, Math.min(box.max.z, this.camera.position.z))
+
+      // Clamp target position
+      this.orbit.target.x = Math.max(box.min.x, Math.min(box.max.x, this.orbit.target.x))
+      this.orbit.target.z = Math.max(box.min.z, Math.min(box.max.z, this.orbit.target.z))
+      this.target.copy(this.orbit.target)
+
+      // Update base camera position if clamping occurred (for parallax)
+      // (Removed baseCameraPosition logic)
+    } else {
+      // Fallback to static map boundaries
+      const clampedCamera = clampToMapBounds(this.camera.position.x, this.camera.position.z)
+      this.camera.position.x = clampedCamera.x
+      this.camera.position.z = clampedCamera.z
+      const clampedTarget = clampToMapBounds(this.orbit.target.x, this.orbit.target.z)
+      this.orbit.target.x = clampedTarget.x
+      this.orbit.target.z = clampedTarget.z
+      this.target.copy(this.orbit.target)
+      // (Removed baseCameraPosition logic)
     }
   }
 
@@ -367,7 +454,9 @@ export class HelsinkiCameraController {
     this.domElement.addEventListener('pointerdown', this.handlePointerDown)
     this.domElement.addEventListener('pointermove', this.handlePointerMoveWithEasing)
     this.domElement.addEventListener('pointerup', this.handlePointerUp)
-    this.domElement.addEventListener('pointerleave', this.handlePointerUp)
+    this.domElement.addEventListener('pointerleave', (event) => {
+      this.handlePointerUp()
+    })
     this.domElement.addEventListener('wheel', this.handleWheelWithEasing, { passive: true })
     this.domElement.addEventListener('wheel', () => { this.userInteracting = true }, { passive: true })
     
@@ -411,6 +500,17 @@ export class HelsinkiCameraController {
       // NO horizontal angle constraints - allow full 360° rotation
       this.orbit.minAzimuthAngle = -Infinity
       this.orbit.maxAzimuthAngle = Infinity
+    }
+  }
+
+  /**
+   * Set the target point and sync to OrbitControls
+   * Use this to set the initial target or update it programmatically
+   */
+  public setTarget(x: number, y: number, z: number): void {
+    this.target.set(x, y, z)
+    if (this.orbit) {
+      this.orbit.target.set(x, y, z)
     }
   }
 
@@ -492,6 +592,9 @@ export class HelsinkiCameraController {
         
         // Apply momentum for smooth easing after drag release
         this.applyMomentum()
+        
+        // Apply mouse look / parallax effect with smooth easing
+        this._applyMouseParallax();
       } catch (err) {
         // ignore orbit update errors
       }
@@ -556,6 +659,68 @@ export class HelsinkiCameraController {
       try { this.orbit.dispose() } catch (e) { }
       this.orbit = null
     }
+  }
+
+  private _handleParallaxMouseMove = (event: MouseEvent) => {
+    const rect = this.domElement.getBoundingClientRect();
+    this.mouseNormalizedX = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    this.mouseNormalizedY = ((event.clientY - rect.top) / rect.height) * 2 - 1;
+  };
+
+  private _handleParallaxMouseLeave = () => {
+    // Do not reset, keep last offset
+  };
+
+  // Unified update method
+  public update(deltaSeconds?: number) {
+    if (this.cameraControls) {
+      // compute delta (seconds) and ensure it's a finite positive number
+      const raw = typeof deltaSeconds === 'number' ? deltaSeconds : ((performance.now() - this._last) / 1000)
+      const dt = Number(raw)
+      this._last = performance.now()
+      if (!Number.isFinite(dt) || dt <= 0) {
+        try { this.cameraControls.update(1 / 60) } catch (err) { this.cameraControls = null }
+      } else {
+        try { this.cameraControls.update(dt) } catch (err) { this.cameraControls = null }
+      }
+    } else if (this.orbit) {
+      try {
+        this.syncPropertiesToOrbit()
+        this.orbit.update()
+        this.applyMomentum()
+      } catch (err) {}
+    }
+    // Always update parallax offset
+    this._applyMouseParallax();
+    // Determine base position
+    if (this.isDragging || this.velocity.length() > this.velocityThreshold || Math.abs(this.rotationVelocity) > this.rotationThreshold) {
+      this.baseCameraPosition.copy(this.camera.position);
+    }
+    // Calculate intended camera position in local camera space
+    const right = new THREE.Vector3();
+    const up = new THREE.Vector3(0, 1, 0);
+    this.camera.getWorldDirection(right);
+    right.crossVectors(up, right).normalize();
+    const offset = new THREE.Vector3();
+    offset.addScaledVector(right, this.parallaxOffsetX);
+    offset.addScaledVector(up, this.parallaxOffsetY);
+    const intended = this.baseCameraPosition.clone().add(offset);
+    this.cameraTargetPosition.x += (intended.x - this.cameraTargetPosition.x) * this.cameraLerpAlpha;
+    this.cameraTargetPosition.y += (intended.y - this.cameraTargetPosition.y) * this.cameraLerpAlpha;
+    this.cameraTargetPosition.z += (intended.z - this.cameraTargetPosition.z) * this.cameraLerpAlpha;
+    this.camera.position.copy(this.cameraTargetPosition);
+
+    // update target proxy
+    if (this.orbit) this.target.copy(this.orbit.target)
+  }
+
+  // Unified _applyMouseParallax method
+  private _applyMouseParallax() {
+    // Always ease offset toward target
+    const targetX = this.mouseNormalizedX * this.parallaxStrength;
+    const targetY = this.mouseNormalizedY * this.parallaxStrength * 0.6;
+    this.parallaxOffsetX += (targetX - this.parallaxOffsetX) * this.parallaxEasing;
+    this.parallaxOffsetY += (targetY - this.parallaxOffsetY) * this.parallaxEasing;
   }
 }
 

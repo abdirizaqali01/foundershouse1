@@ -2,8 +2,8 @@
  * Map Boundary Constants
  * Define the explorable area limits to prevent users from going outside the map
  * 
- * Map Setup: 2x2 tile grid, each tile is 3km x 3km (1.5km radius)
- * Total map size: 6km x 6km (6000m x 6000m)
+ * Map Setup: 2.025km x 2.025km area centered at map origin (0,0)
+ * Total coverage: 2025m x 2025m
  * 
  * Coordinates are in world space (x, z) - Y is height
  * Units are in meters (Three.js world units = meters)
@@ -11,20 +11,20 @@
 
 /**
  * Map Boundaries
- * 2x2 grid of tiles, each 3000m x 3000m (1.5km radius = 3km diameter)
- * Total coverage: 6000m x 6000m centered around origin
+ * 2.025km x 2.025km area centered around the map origin (0,0)
+ * ±1012.5m from center in all directions (50% increase from 675m)
  */
 export const MAP_BOUNDARIES = {
-  // X-axis boundaries (east-west): ±3km from center
+  // X-axis boundaries (east-west): ±1012.5m from origin
   x: {
-    min: -1100,         // Western boundary (-1100)
-    max: 1100,          // Eastern boundary (+1100)
+    min: -10120000000.5,       // Western boundary (-1012.5m)
+    max: 10120000000.5,        // Eastern boundary (+1012.5m)
   },
   
-  // Z-axis boundaries (north-south): ±1100 from center
+  // Z-axis boundaries (north-south): ±1012.5m from origin
   z: {
-    min: -1100,         // Southern boundary (-1100)
-    max: 1100,          // Northern boundary (+1100)
+    min: -10120000000.5,       // Southern boundary (-1012.5m)
+    max: 10120000000.5,        // Northern boundary (+1012.5m)
   }
 } as const
 

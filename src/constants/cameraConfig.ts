@@ -84,8 +84,8 @@ export const CAMERA_RESTRICTIONS = {
  * Controls how fast users can rotate, zoom, and pan
  */
 export const CAMERA_SPEED_LIMITS = {
-  rotateSpeed: 0.3,     // Rotation velocity limit (lower = slower, prevents spinning too fast)
-  zoomSpeed: 0.5,       // Zoom speed
+  rotateSpeed: 1.0,     // Rotation velocity limit (higher = faster rotation, tighter turning)
+  zoomSpeed: 1.0,       // Zoom speed (normal speed)
   panSpeed: 0.3         // Pan speed
 } as const
 
@@ -94,18 +94,8 @@ export const CAMERA_SPEED_LIMITS = {
  */
 export const CAMERA_DAMPING = {
   enabled: true,
-  factor: 0.08,         // Smooth, slow damping
+  factor: 0.12,         // Increased for buttery smooth damping
   rotationSpeed: 0.5,   // Slower rotation for deliberate feel
   zoomSpeed: 0.7,       // Moderate zoom speed
   panSpeed: 0.5         // Slower panning
-} as const
-
-/**
- * Idle rotation settings (after cinematic)
- */
-export const IDLE_ROTATION = {
-  enabled: true,
-  speed: -(Math.PI * 1) / 120,  // Very slow rotation (360° in 120 seconds)
-  pauseOnInteraction: true,
-  resumeDelay: 8000             // Resume after 8 seconds of inactivity
 } as const

@@ -12,8 +12,8 @@ export {
 } from './cinematicAnimation'
 
 export {
-  createIdleRotation,
-  updateIdleRotation,
-  stopIdleRotation,
-  type IdleRotationState
-} from './idleRotation'
+  createPOITransition,
+  updatePOITransition,
+  cancelPOITransition,
+  type POITransitionState
+} from './poiTransition'

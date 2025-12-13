@@ -145,12 +145,17 @@ export function updateCinematicAnimation(
     eased
   )
 
-  // Look at current target
-  camera.lookAt(currentTarget)
-
-  // Update controls target to match
+  // Update controls target to match (do this BEFORE lookAt for smoother motion)
   if (controls && controls.target) {
     controls.target.copy(currentTarget)
+  }
+
+  // Use controls update instead of direct lookAt for smoother motion
+  if (controls && controls.update) {
+    controls.update()
+  } else {
+    // Fallback to lookAt if controls don't support update
+    camera.lookAt(currentTarget)
   }
 
   // Animation continues

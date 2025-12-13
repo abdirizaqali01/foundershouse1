@@ -66,29 +66,15 @@ vec4 gaussianBlur(sampler2D tex, vec2 uv, vec2 resolution, float blurAmount) {
 }
 
 void main() {
-  // Calculate vertical position-based blur and fog
-  // Bottom of screen (vUv.y near 0) = more blur + fog
-  // Center/top (vUv.y near 0.5-1.0) = less blur + no fog
+  // Calculate vertical position for fog gradient
   float verticalPos = vUv.y;
-  
-  // Create blur gradient from bottom to center
-  // 0.0 at bottom (full blur) -> 1.0 at center and above (no blur)
-  float blurFactor = smoothstep(0.0, 0.4, verticalPos);
-  
-  // Calculate blur amount (0 = no blur, 8 = heavy blur)
-  float blurAmount = mix(8.0, 0.0, blurFactor);
   
   // Calculate bottom fog gradient (quarter of fog range)
   // 0.0 at bottom (full fog) -> 1.0 at quarter height (no fog)
   float fogFactor = smoothstep(0.0, 0.25, verticalPos);
   
-  // Sample original scene with optional blur
-  vec4 sceneColor;
-  if(blurAmount > 0.5) {
-    sceneColor = gaussianBlur(tDiffuse, vUv, uResolution, blurAmount);
-  } else {
-    sceneColor = texture2D(tDiffuse, vUv);
-  }
+  // Sample original scene (no blur)
+  vec4 sceneColor = texture2D(tDiffuse, vUv);
 
   // Detect edges
   float edgeStrength = getEdgeStrength(tDiffuse, vUv, uResolution);

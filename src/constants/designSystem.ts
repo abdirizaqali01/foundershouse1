@@ -116,25 +116,10 @@ export const SCENE_CONFIG = {
 // Time Configuration (Helsinki timezone)
 export const TIME_CONFIG = {
   timezone: 'Europe/Helsinki',
-  dayStart: 8,  // 8:00 AM
-  dayEnd: 18,   // 6:00 PM (18:00)
+  dayStart: 8,
+  dayEnd: 18,
 } as const
 
-// Helsinki Location
-export const HELSINKI_CENTER = {
-  lat: 60.1699,
-  lng: 24.9384,
-  radius: 2, // km
-} as const
-
-// Animation Constants
-export const ANIMATION = {
-  parallaxFactor: 0.2,
-  cameraHeightMultiplier: 1.2,
-  cameraDistanceMultiplier: 0.3,
-} as const
-
-// Fog Configuration
 export const FOG = {
   near: 750,
   far: 1450,
@@ -144,20 +129,6 @@ export const FOG = {
   },
 } as const
 
-// City Lights Configuration
 export const CITY_LIGHTS = {
-  color: 0xfff1c8,  // Warm light color
-} as const
-
-// Typography / Fonts
-export const FONTS = {
-  backgroundText: 'https://threejs.org/examples/fonts/helvetiker_bold.typeface.json',
-} as const
-
-// Post-Processing
-export const POST_PROCESS = {
-  renderTarget: {
-    width: window.innerWidth * window.devicePixelRatio,
-    height: window.innerHeight * window.devicePixelRatio,
-  },
+  color: 0xfff1c8,
 } as const

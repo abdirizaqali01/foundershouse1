@@ -16,11 +16,12 @@ Built with React, TypeScript, and Three.js, this project showcases advanced rend
 - **Post-Processing Pipeline** - Edge detection and organic noise textures
 
 ### Visual Effects
-- **Dynamic Day/Night Mode** - Automatic or manual switching based on Helsinki time
+- **Loading Animations** - Smooth logo fade-in and typing text sequences
+- **Dynamic Day/Night Mode** - Automatic switching based on Helsinki time
 - **Procedural City Lights** - 800+ instanced lights with flickering animation (night mode)
-- **Volumetric Fog** - Depth-based fog with smooth fade-in during cinematic
-- **Starfield** - Procedurally generated stars with shimmer effect (night mode)
-- **Parallax Background Text** - Depth-enhanced UI elements
+- **Volumetric Fog** - Depth-based fog with smooth transitions
+- **Enhanced Starfield** - Multi-layered procedural stars with Milky Way and nebula clusters (night mode)
+- **Smooth Animations** - Clean slide transitions between loading states
 
 ### Interaction
 - **Advanced Camera Controls** - OrbitControls with optional camera-controls upgrade
@@ -77,16 +78,22 @@ foundershouse/
 │   │   └── index.ts
 │   ├── components/         # React UI components
 │   │   ├── HelsinkiViewer.tsx      # Main 3D viewer component
-│   │   └── HelsinkiViewer.css      # Styled UI overlay
+│   │   ├── HelsinkiViewer.css      # Styled UI overlay
+│   │   ├── LoadingScreen.tsx       # Initial logo loading screen
+│   │   ├── LoadingScreen.css       # Loading screen styles
+│   │   ├── TypingAnimation.tsx     # Animated typing text component
+│   │   └── TypingAnimation.css     # Typing animation styles
 │   ├── constants/          # Design system & configuration
 │   │   └── designSystem.ts         # Colors, fog, animation params
 │   ├── core/              # Core 3D scene management
 │   │   ├── HelsinkiScene_GLB.ts    # Main scene orchestrator
 │   │   └── HelsinkiCameraController.ts  # Camera wrapper
 │   ├── effects/           # Visual effects systems
-│   │   ├── cityLights.ts           # Instanced city lights
+│   │   ├── cityLights_refactored.ts # Optimized city lights system
 │   │   ├── fogManager.ts           # Fog control utilities
-│   │   └── stars.ts                # Starfield generation
+│   │   ├── stars.ts                # Enhanced starfield with Milky Way
+│   │   └── shaders/                # Effect-specific shaders
+│   │       └── cityLightShaders.ts # City light GLSL shaders
 │   ├── helpers/           # Utility functions
 │   │   ├── geometryHelpers.ts      # Mesh traversal & analysis
 │   │   ├── perlinNoise.ts          # Procedural noise generator
@@ -142,6 +149,27 @@ foundershouse/
 ---
 
 ## 🛠️ Development Guide
+
+### Customizing the Starfield
+
+The night sky features multiple star layers with different properties:
+
+**File:** `src/effects/stars.ts`
+
+```typescript
+// Adjust star counts
+const backgroundStars = createBackgroundStars(15000)  // Tiny twinkling stars
+const milkyWay = createMilkyWay(8000)                 // Milky Way band with nebula
+const prominentStars = createProminentStars(500)      // Large bright stars
+
+// Modify opacity and shimmer in designSystem.ts
+export const OPACITY = {
+  stars: {
+    shimmerMin: 0.3,  // Minimum opacity during shimmer
+    shimmerMax: 0.8,  // Maximum opacity during shimmer
+  }
+}
+```
 
 ### Customizing the Cinematic Animation
 
@@ -293,7 +321,13 @@ All visual constants are centralized in `src/constants/designSystem.ts`:
 **Solution:** Reduce city lights count (line 159 in `HelsinkiScene_GLB.ts`) or disable post-processing shaders.
 
 ### Issue: Animation doesn't start
-**Solution:** Ensure `playIntroAnimation()` is called after model loads. Check `HelsinkiViewer.tsx` line ~40.
+**Solution:** Ensure the cinematic animation is properly initialized after model load. Check that `cinematicAnimation.isPlaying` is set to `true` in `HelsinkiScene_GLB.ts`.
+
+### Issue: Stars not visible at night
+**Solution:** Verify that night mode is active. Stars only appear when `isNightMode` is `true`. Toggle manually or check Helsinki timezone detection.
+
+### Issue: Loading screen stuck
+**Solution:** Check that all loading phases complete properly. Verify LoadingScreen → TypingAnimation → Map viewer transition timing in `App.tsx`.
 
 ### Issue: Textures appear broken
 **Solution:** Re-export GLB with "Pack Resources" and "Include → Images" enabled in Blender.

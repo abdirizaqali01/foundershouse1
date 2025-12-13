@@ -29,3 +29,32 @@ export {
   getCurrentCameraConfig,
   formatCameraConfigAsCode
 } from './cameraUtils'
+
+export {
+  detectPerformanceTier,
+  PerformanceMonitor,
+  type PerformanceProfile
+} from './performanceDetector'
+
+export {
+  isMobileDevice,
+  isTabletDevice,
+  isLowEndDevice,
+  hasSlowConnection,
+  getDeviceCapabilities,
+  getRecommendedModelPath,
+  logDeviceInfo,
+  type DeviceCapabilities
+} from './deviceDetection'
+
+export {
+  setupClickHandler
+} from './clickHandlers'
+
+export {
+  createCamera,
+  createRenderer,
+  configureCameraControls,
+  createRenderTarget,
+  handleResize
+} from './sceneSetup'

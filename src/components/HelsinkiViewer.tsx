@@ -21,6 +21,7 @@ export const HelsinkiViewer = () => {
   const [isDemoNightMode, setIsDemoNightMode] = useState<boolean>(false)
   const [isAdvancedCamera, setIsAdvancedCamera] = useState<boolean>(false)
   const [renderMode, setRenderMode] = useState<RenderMode>('textured-red')
+  const [currentPOI, setCurrentPOI] = useState<{ name: string; description: string } | null>(null)
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -45,6 +46,18 @@ export const HelsinkiViewer = () => {
       })
 
       sceneRef.current = scene
+      
+      // Expose to window for console debugging
+      ;(window as any).helsinkiScene = scene
+      
+      // Expose POI label setter to scene
+      ;(window as any).showPOILabel = (name: string, description: string) => {
+        setCurrentPOI({ name, description })
+      }
+      ;(window as any).hidePOILabel = () => {
+        setCurrentPOI(null)
+      }
+      
       setStatus('Loading Helsinki 3D model...')
 
       // Animation loop
@@ -111,10 +124,6 @@ export const HelsinkiViewer = () => {
       // Small delay to ensure user sees 100%
       const timer = setTimeout(() => {
         setLoading(false)
-        // Play intro animation after hiding loading overlay
-        setTimeout(() => {
-          if (sceneRef.current) sceneRef.current.playIntroAnimation()
-        }, 300)
       }, 200)
       return () => clearTimeout(timer)
     }
@@ -124,7 +133,6 @@ export const HelsinkiViewer = () => {
   useEffect(() => {
     const failsafeTimer = setTimeout(() => {
       if (loading) {
-        console.warn('⚠️ Loading timeout reached - forcing completion')
         setLoading(false)
         setModelLoaded(true)
       }
@@ -236,6 +244,16 @@ export const HelsinkiViewer = () => {
             <h1 className="loading-title">The next generation of obsessed builders</h1>
             {/* small ticker on the right */}
             <div className="loading-ticker">{Math.floor(tickerProgress)}%</div>
+          </div>
+        </div>
+      )}
+
+      {/* POI Label Overlay */}
+      {currentPOI && (
+        <div className="poi-label">
+          <div className="poi-label-content">
+            <h2 className="poi-label-name">{currentPOI.name}</h2>
+            <p className="poi-label-description">{currentPOI.description}</p>
           </div>
         </div>
       )}

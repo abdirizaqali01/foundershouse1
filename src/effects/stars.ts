@@ -213,7 +213,7 @@ function createMilkyWay(count: number): THREE.Group {
 }
 
 /**
- * Create prominent stars (larger, brighter)
+ * Prominent stars (larger, brighter)
  */
 function createProminentStars(count: number): THREE.Points {
   const { radiusMin, radiusMax } = SCENE_CONFIG.stars
@@ -291,45 +291,21 @@ export function animateStars(starGroup: THREE.Group | THREE.Points, elapsed: num
 
 /**
  * Animate individual star layer with discrete random blinking
+ * Updated to prevent all stars from blinking simultaneously
  */
 function animateStarLayer(points: THREE.Points, elapsed: number): void {
   if (!(points.material instanceof THREE.PointsMaterial)) return
 
-  // Initialize blink state if not exists
-  if (!points.userData.blinkState) {
-    points.userData.blinkState = {
-      isOn: true,
-      nextBlinkTime: elapsed + Math.random() * 2, // First blink in 0-2 seconds
-      blinkDuration: 0,
-      baseOpacity: points.material.opacity
-    }
-  }
+  // Instead of blinking the entire layer, use a subtle shimmer effect
+  // This prevents the jarring "all stars blink at once" issue
+  const { shimmerMin, shimmerMax } = OPACITY.stars
+  const { shimmerSpeed } = SCENE_CONFIG.stars
 
-  const state = points.userData.blinkState
+  // Very gentle shimmer using sine wave (much more subtle than blinking)
+  const shimmerAmount = Math.sin(elapsed * shimmerSpeed * 0.5) * 0.5 + 0.5 // 0-1
+  points.material.opacity = shimmerMin + shimmerAmount * (shimmerMax - shimmerMin)
 
-  // Check if it's time to change state
-  if (elapsed >= state.nextBlinkTime) {
-    if (state.isOn) {
-      // Blink off
-      state.isOn = false
-      // Blink lasts between 0.08-0.4 seconds (quick to medium blink)
-      state.blinkDuration = 0.08 + Math.random() * 0.32
-      state.nextBlinkTime = elapsed + state.blinkDuration
-    } else {
-      // Turn back on
-      state.isOn = true
-      // Wait between 1-6 seconds before next blink (longer than city lights)
-      const waitTime = 1.0 + Math.random() * 5.0
-      state.nextBlinkTime = elapsed + waitTime
-    }
-  }
-
-  // Update opacity based on current state
-  if (state.isOn) {
-    points.material.opacity = state.baseOpacity
-  } else {
-    // When blinking off, dim to 10-30% of base opacity
-    points.material.opacity = state.baseOpacity * (0.1 + Math.random() * 0.2)
-  }
+  // Note: Individual star blinking would require a custom shader
+  // The current approach with PointsMaterial applies opacity to all points uniformly
 }
 

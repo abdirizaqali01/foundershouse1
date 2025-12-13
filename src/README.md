@@ -7,12 +7,12 @@ Welcome to the FH 3D Viewer codebase! This guide will help you understand the pr
 ```
 src/
 ├── animation/          # Camera animations and motion controllers
-├── components/         # React components (UI)
-├── constants/          # Design system constants (colors, fog, etc.)
-├── core/              # Main 3D scene logic
+├── components/         # React components (UI and loading screens)
+├── constants/          # Design system constants (colors, fog, POIs)
+├── core/              # Main 3D scene logic and managers
 ├── effects/           # Visual effects (fog, lights, stars)
-├── helpers/           # Utility functions
-├── loaders/           # 3D model loading
+├── helpers/           # Utility functions and device detection
+├── loaders/           # 3D model loading with DRACO compression
 ├── rendering/         # Lighting and post-processing
 ├── shaders/           # Custom GLSL shaders
 └── types/             # TypeScript type definitions
@@ -99,9 +99,92 @@ Edit in `HelsinkiScene_GLB.ts` around line ~275.
 
 ---
 
+## ✨ Starfield System
+
+### Location: `src/effects/stars.ts`
+
+The night sky features a multi-layered starfield system with realistic effects:
+
+**Star Layers:**
+
+```typescript
+// Background stars (tiny twinkling base layer)
+const backgroundStars = createBackgroundStars(15000)
+// Size: 2.44px, Opacity: 0.732, White color
+
+// Milky Way (dense galactic band)
+const milkyWay = createMilkyWay(8000)
+// Contains 3 nebula clusters (pink, blue, purple)
+// Core stars with varied colors (blue-white to warm yellow)
+
+// Prominent stars (large bright individual stars)
+const prominentStars = createProminentStars(500)
+// Size: 6.1px, Opacity: 1.0, Yellowish-white color
+```
+
+**Customizing Star Appearance:**
+
+```typescript
+// In constants/designSystem.ts
+export const SCENE_CONFIG = {
+  stars: {
+    radiusMin: 800,          // Inner dome radius
+    radiusMax: 1000,         // Outer dome radius
+    shimmerSpeed: 0.3,       // Twinkle animation speed
+  }
+}
+
+export const OPACITY = {
+  stars: {
+    shimmerMin: 0.3,  // Minimum shimmer opacity
+    shimmerMax: 0.8,  // Maximum shimmer opacity
+  }
+}
+```
+
+**To add more/fewer stars:**
+Edit the count parameters in `createStarfield()` function (stars.ts, lines ~15-27)
+
+**Star Animation:**
+Stars use a gentle sine-wave shimmer instead of discrete blinking to prevent jarring simultaneous flashes. The shimmer is controlled by `animateStars()` and `animateStarLayer()` functions.
+
+---
+
 ## 🎨 UI & Styling
 
 ### Location: `src/components/`
+
+#### Loading Screen Sequence
+
+The app uses a three-phase loading sequence:
+
+1. **LoadingScreen** (`LoadingScreen.tsx`)
+   - Displays logo with fade-in animation
+   - Duration: 3.5 seconds
+   - Background: `#FFF8F2` (cream)
+
+2. **TypingAnimation** (`TypingAnimation.tsx`)
+   - Two sequential typing messages:
+     - "Founders House: The next generation of obsessed builders"
+     - "Where ambition concentrates, potential multiplies"
+   - First message backspaces before second types
+   - Slides up to reveal map after completion
+   - Centered text at 80% viewport width
+
+3. **Map Viewer** (`HelsinkiViewer.tsx`)
+   - Main 3D scene with cinematic animation
+   - Slides up from bottom with 0.8s transition
+
+**To adjust loading timing:**
+```typescript
+// In LoadingScreen.tsx (line ~20)
+setTimeout(() => onComplete(), 3500)  // Change 3500 (ms)
+
+// In TypingAnimation.tsx
+const typingSpeed = 30      // Characters per second
+const eraseSpeed = 50       // Backspace speed
+const slideOutDuration = 800 // Slide animation (ms)
+```
 
 #### Logo (`HelsinkiViewer.tsx` line ~195)
 ```tsx
@@ -235,6 +318,23 @@ const startPosition = new THREE.Vector3(
 )
 ```
 
+### 6. Change Star Count
+```typescript
+// In stars.ts createStarfield() function
+const backgroundStars = createBackgroundStars(20000)  // More stars (was 15000)
+const milkyWay = createMilkyWay(10000)                // Denser Milky Way (was 8000)
+const prominentStars = createProminentStars(1000)     // More bright stars (was 500)
+```
+
+### 7. Adjust Loading Screen Duration
+```typescript
+// In LoadingScreen.tsx (line ~20)
+setTimeout(() => onComplete(), 2000)  // Faster (was 3500ms)
+
+// In TypingAnimation.tsx
+const typingSpeed = 50  // Faster typing (was 30)
+```
+
 ---
 
 ## 🛠️ Development Commands
@@ -274,6 +374,16 @@ npm run preview
 ### Transition between animations is visible
 - Start idle rotation earlier (decrease 0.80 value in `HelsinkiScene_GLB.ts`)
 - Increase animation duration for smoother deceleration
+
+### Stars not appearing in night mode
+- Check that `isNightMode` is true in the scene
+- Verify star creation in `createStarfield()` is being called
+- Ensure stars are added to the scene with `scene.add(starGroup)`
+
+### Loading screen issues
+- Check timing in `App.tsx` phase transitions
+- Verify LoadingScreen and TypingAnimation components are rendering
+- Check CSS animations in respective `.css` files
 
 ---
 

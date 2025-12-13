@@ -1,0 +1,71 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@600;700&display=swap');
+
+.loading-screen {
+  position: fixed;
+  inset: 0;
+  background: #FFF8F2; /* Always cream */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.loading-content {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-logo {
+  animation: blurAtEnd 5s linear forwards;
+}
+
+.loading-logo img {
+  height: 120px;
+  width: auto;
+  display: block;
+}
+
+@keyframes blurAtEnd {
+  0%, 70% {
+    filter: blur(0px);
+    opacity: 1;
+  }
+  100% {
+    filter: blur(40px);
+    opacity: 1;
+  }
+}
+
+.loading-bar-container {
+  position: absolute;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 380px;
+  max-width: 90vw;
+  height: 2px;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 1px;
+  overflow: hidden;
+}
+
+.loading-bar {
+  height: 100%;
+  width: 0%;
+  background: #c23d2a;
+  border-radius: 1px;
+  animation: fillBar 3.5s linear forwards;
+}
+
+@keyframes fillBar {
+  from {
+    width: 0%;
+  }
+  to {
+    width: 100%;
+  }
+}

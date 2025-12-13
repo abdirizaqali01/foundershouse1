@@ -1,6 +1,26 @@
 /**
  * Points of Interest (POI) Configuration
  * Centralized location definitions for the entire site
+ * 
+ * USAGE - Smooth Camera Transitions to POIs:
+ * 
+ * From browser console:
+ *   window.helsinkiScene.focusPOI('FOUNDERS_HOUSE')           // Fly to Founders House (2s animation)
+ *   window.helsinkiScene.focusPOI('OURA', 600, 45, 12, 1.5)   // Fly to Oura, custom distance/angle/duration
+ *   window.helsinkiScene.focusPOI('WOLT', 800)                 // Fly to Wolt at 800m distance
+ * 
+ * Parameters:
+ *   - poiName: POI key (e.g., 'FOUNDERS_HOUSE', 'OURA', 'WOLT')
+ *   - distance: Camera distance from POI in meters (default: 700)
+ *   - azimuth: Horizontal viewing angle in degrees (default: 90)
+ *   - elevation: Vertical viewing angle in degrees (default: 15)
+ *   - duration: Animation duration in seconds (default: 2.0)
+ *   - animated: Whether to animate or jump instantly (default: true)
+ * 
+ * Features:
+ *   - Smooth ease-in-out animation
+ *   - User can interrupt by clicking/dragging
+ *   - Callback on arrival
  */
 
 export interface PointOfInterest {
@@ -48,55 +68,135 @@ export const FOUNDERS_HOUSE_POI: PointOfInterest = {
 }
 
 /**
+ * Oura Ring HQ
+ * TODO: Click on the actual Oura building to get correct coordinates
+ */
+export const OURA_POI: PointOfInterest = {
+  id: 'oura',
+  name: 'Oura',
+  description: 'Oura Ring - Health technology and wearables',
+  mapCoords: {
+    x: 804,
+    y: 520
+  },
+  worldCoords: {
+    x: 804,
+    y: -47,
+    z: -520
+  },
+  cameraView: {
+    distance: 280,
+    azimuth: 90,
+    elevation: 40
+  }
+}
+
+/**
+ * Wolt HQ
+ * Located at world coordinates: x: -99, y: -38, z: -781
+ */
+export const WOLT_POI: PointOfInterest = {
+  id: 'wolt',
+  name: 'Wolt',
+  description: 'Wolt - Food delivery and logistics platform',
+  mapCoords: {
+    x: -99,
+    y: 781
+  },
+  worldCoords: {
+    x: -99,
+    y: -38,
+    z: -781
+  },
+  cameraView: {
+    distance: 320,
+    azimuth: 90,
+    elevation: 40
+  }
+}
+
+/**
+ * Lifeline Ventures
+ * TODO: Click on the actual Lifeline building to get correct coordinates
+ */
+export const LIFELINE_VENTURES_POI: PointOfInterest = {
+  id: 'lifeline-ventures',
+  name: 'Lifeline Ventures',
+  description: 'Lifeline Ventures - Early-stage venture capital',
+  mapCoords: {
+    x: 233,
+    y: -691
+  },
+  worldCoords: {
+    x: 233,
+    y: -48,
+    z: 691
+  },
+  cameraView: {
+    distance: 300,
+    azimuth: 90,
+    elevation: 40
+  }
+}
+
+/**
+ * Silo AI
+ * TODO: Click on the actual Silo AI building to get correct coordinates
+ * Currently using placeholder - NEEDS DIFFERENT COORDS FROM LIFELINE
+ */
+export const SILO_AI_POI: PointOfInterest = {
+  id: 'silo-ai',
+  name: 'Silo AI',
+  description: 'Silo AI - Europe\'s largest private AI lab',
+  mapCoords: {
+    x: -200,
+    y: -500
+  },
+  worldCoords: {
+    x: -200,
+    y: -48,
+    z: 500
+  },
+  cameraView: {
+    distance: 290,
+    azimuth: 90,
+    elevation: 40
+  }
+}
+
+/**
+ * Wave Ventures
+ * TODO: Click on the actual Wave Ventures building to get correct coordinates
+ */
+export const WAVE_VENTURES_POI: PointOfInterest = {
+  id: 'wave-ventures',
+  name: 'Wave Ventures',
+  description: 'Wave Ventures - Venture capital and startup acceleration',
+  mapCoords: {
+    x: 52,
+    y: 529
+  },
+  worldCoords: {
+    x: 52,
+    y: -37,
+    z: -529
+  },
+  cameraView: {
+    distance: 310,
+    azimuth: 90,
+    elevation: 40
+  }
+}
+
+/**
  * All Points of Interest
  * Add new locations here as the site expands
  */
 export const POINTS_OF_INTEREST: Record<string, PointOfInterest> = {
   FOUNDERS_HOUSE: FOUNDERS_HOUSE_POI,
-  
-  // Example: Add more POIs as needed
-  // HARBOR: {
-  //   id: 'harbor',
-  //   name: 'Helsinki Harbor',
-  //   description: 'The vibrant waterfront',
-  //   mapCoords: { x: -200, y: 150 },
-  //   worldCoords: { x: -200, y: 0, z: -150 },
-  //   cameraView: { distance: 1200, azimuth: 90, elevation: 15 }
-  // }
-}
-
-/**
- * Get POI by ID
- */
-export function getPOI(id: string): PointOfInterest | undefined {
-  return Object.values(POINTS_OF_INTEREST).find(poi => poi.id === id)
-}
-
-/**
- * Get all POI IDs
- */
-export function getAllPOIIds(): string[] {
-  return Object.values(POINTS_OF_INTEREST).map(poi => poi.id)
-}
-
-/**
- * Convert map coordinates to world coordinates
- * Accounts for the model's -90° X-axis rotation
- */
-export function mapToWorldCoords(mapX: number, mapY: number, height: number = 0) {
-  return {
-    x: mapX,
-    y: height,
-    z: -mapY  // Inverted due to model rotation
-  }
-}
-
-/**
- * Convert world coordinates to map coordinates
- */
-export function worldToMapCoords(worldX: number, worldZ: number) {
-  return {
-    x: worldX,
-    y: -worldZ
-  }
+  OURA: OURA_POI,
+  WOLT: WOLT_POI,
+  LIFELINE_VENTURES: LIFELINE_VENTURES_POI,
+  SILO_AI: SILO_AI_POI,
+  WAVE_VENTURES: WAVE_VENTURES_POI,
 }

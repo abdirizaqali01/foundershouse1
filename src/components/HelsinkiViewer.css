@@ -201,3 +201,89 @@
     font-size: 2.5rem;
   }
 }
+
+/* POI Label Overlay */
+.poi-label {
+  position: fixed;
+  bottom: 8rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  pointer-events: none;
+  
+  /* Animation */
+  animation: poiFadeIn 0.6s ease-out forwards;
+  opacity: 0;
+}
+
+@keyframes poiFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.poi-label.fade-out {
+  animation: poiFadeOut 0.4s ease-in forwards;
+}
+
+@keyframes poiFadeOut {
+  from {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px);
+  }
+}
+
+.poi-label-content {
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(10px);
+  padding: 1.5rem 3rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(226, 26, 17, 0.5);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.poi-label-name {
+  font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #e21a11;
+  margin: 0;
+  text-align: center;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+}
+
+.poi-label-description {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0.5rem 0 0 0;
+  text-align: center;
+}
+
+@media (max-width: 767px) {
+  .poi-label {
+    bottom: 6rem;
+  }
+  
+  .poi-label-content {
+    padding: 1rem 2rem;
+  }
+  
+  .poi-label-name {
+    font-size: 1.5rem;
+  }
+  
+  .poi-label-description {
+    font-size: 0.875rem;
+  }
+}

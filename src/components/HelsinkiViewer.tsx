@@ -22,9 +22,10 @@ interface HelsinkiViewerProps {
   shouldPause?: boolean
   scrollProgress?: number
   onMapLoadingChange?: (state: MapLoadingState) => void
+  showUI?: boolean
 }
 
-export const HelsinkiViewer = ({ shouldLoad = true, shouldPause = false, scrollProgress = 0, onMapLoadingChange }: HelsinkiViewerProps) => {
+export const HelsinkiViewer = ({ shouldLoad = true, shouldPause = false, scrollProgress = 0, onMapLoadingChange, showUI = false }: HelsinkiViewerProps) => {
   const containerRef = useRef<HTMLDivElement>(null)
   const sceneRef = useRef<HelsinkiScene | null>(null)
   const animationFrameRef = useRef<number>(0)
@@ -132,36 +133,7 @@ export const HelsinkiViewer = ({ shouldLoad = true, shouldPause = false, scrollP
             const rotY = camera.rotation.y * 180 / Math.PI
             const rotZ = camera.rotation.z * 180 / Math.PI
 
-            console.log('📷 CAMERA:', {
-              position: {
-                x: Math.round(pos.x),
-                y: Math.round(pos.y),
-                z: Math.round(pos.z)
-              },
-              rotation: {
-                x: rotXDeg.toFixed(1) + '°',
-                y: rotY.toFixed(1) + '°',
-                z: rotZ.toFixed(1) + '°'
-              },
-              target: scene.controls?.target ? {
-                x: Math.round(scene.controls.target.x),
-                y: Math.round(scene.controls.target.y),
-                z: Math.round(scene.controls.target.z)
-              } : 'N/A',
-              height: Math.round(pos.y),
-              distance: Math.round(Math.sqrt(
-                Math.pow(pos.x - (scene.controls?.target?.x || 0), 2) +
-                Math.pow(pos.y - (scene.controls?.target?.y || 0), 2) +
-                Math.pow(pos.z - (scene.controls?.target?.z || 0), 2)
-              )),
-              heroTextDebug: {
-                viewportX: viewportX.toFixed(1) + '%',
-                viewportY: viewportY.toFixed(1) + '%',
-                distanceFromCenterX: distanceFromCenterX.toFixed(1),
-                distanceFromCenterY: distanceFromCenterY.toFixed(1),
-                opacity: opacity.toFixed(2)
-              }
-            })
+            // Removed excessive camera logging
 
             lastLogTime = now
           }
@@ -201,30 +173,28 @@ export const HelsinkiViewer = ({ shouldLoad = true, shouldPause = false, scrollP
 
   // Wheel event listener to control grayscale slider - bidirectional and very gradual
   useEffect(() => {
+    if (!showUI) return;
     const handleWheel = (event: WheelEvent) => {
       setGrayscaleAmount(prev => {
         // Scroll down (positive deltaY) = reduce grayscale
         // Scroll up (negative deltaY) = increase grayscale
-        // 90% / 400 scrolls = 0.225% per scroll tick
-        const change = event.deltaY > 0 ? -0.3 : 0.3
-        const newAmount = Math.max(0, Math.min(90, prev + change))
-        return newAmount
-      })
-    }
-
-    window.addEventListener('wheel', handleWheel)
-    return () => window.removeEventListener('wheel', handleWheel)
-  }, [])
+        const change = event.deltaY > 0 ? -0.3 : 0.3;
+        const newAmount = Math.max(0, Math.min(90, prev + change));
+        return newAmount;
+      });
+    };
+    window.addEventListener('wheel', handleWheel);
+    return () => window.removeEventListener('wheel', handleWheel);
+  }, [showUI]);
 
   // Apply grayscale dynamically to canvas
   useEffect(() => {
-    if (!containerRef.current) return
-
-    const canvas = containerRef.current.querySelector('canvas')
+    if (!containerRef.current) return;
+    const canvas = containerRef.current.querySelector('canvas');
     if (canvas) {
-      canvas.style.filter = `grayscale(${grayscaleAmount}%) brightness(1.15) contrast(0.85)`
+      canvas.style.filter = `grayscale(${grayscaleAmount}%) brightness(1.15) contrast(0.85)`;
     }
-  }, [grayscaleAmount])
+  }, [grayscaleAmount]);
 
 
   // Independent ticker animation - runs smoothly from 0-100 over ~2.5 seconds
@@ -236,21 +206,18 @@ export const HelsinkiViewer = ({ shouldLoad = true, shouldPause = false, scrollP
     const UPDATE_INTERVAL = 16 // ~60fps (16ms per frame)
 
     const tick = () => {
-      const elapsed = Date.now() - tickerStartTimeRef.current
-      const timeBasedProgress = Math.min((elapsed / TICKER_DURATION) * 100, 100)
-
+      const elapsed = Date.now() - tickerStartTimeRef.current;
+      const timeBasedProgress = Math.min((elapsed / TICKER_DURATION) * 100, 100);
       setTickerProgress((prev) => {
         // Smoothly interpolate towards time-based progress
-        const target = timeBasedProgress
-        const distance = target - prev
-
-        if (Math.abs(distance) < 0.1) return target
-
+        const target = timeBasedProgress;
+        const distance = target - prev;
+        if (Math.abs(distance) < 0.1) return target;
         // Smooth easing
-        const increment = distance * 0.1
-        return prev + increment
-      })
-    }
+        const increment = distance * 0.1;
+        return prev + increment;
+      });
+    };
 
     // Use setInterval instead of requestAnimationFrame to continue in background
     const intervalId = setInterval(tick, UPDATE_INTERVAL)
@@ -419,8 +386,6 @@ export const HelsinkiViewer = ({ shouldLoad = true, shouldPause = false, scrollP
         <div
           className="hero-text-container"
           style={{
-            // Simpler positioning - just use fixed offset for now
-            // Camera tracking causes text to go off-screen
             transform: `translateY(0vh)`,
             opacity: heroTextOpacity,
             transition: 'opacity 0.3s ease-out'

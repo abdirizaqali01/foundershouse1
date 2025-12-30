@@ -452,9 +452,6 @@
 .text-centered.align-left.text-pushed-by-box {
   transform: translateY(calc(-22vh));
   transition: transform 1.4s cubic-bezier(0.3, 0.43, 0, 1);
-.text-centered.align-left.text-pushed-by-box {
-  transform: translateY(calc(-22vh));
-  transition: transform 1.4s cubic-bezier(0.3, 0.43, 0, 1);
   will-change: transform, opacity;
 }
 

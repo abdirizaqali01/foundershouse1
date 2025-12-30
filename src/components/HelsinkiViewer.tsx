@@ -38,7 +38,7 @@ export const HelsinkiViewer = ({ shouldLoad = true, shouldPause = false, scrollP
   const [heroTextOpacity, setHeroTextOpacity] = useState<number>(1) // Hero text opacity based on camera direction
   // New staged fade-in states
   const [showHeroText, setShowHeroText] = useState(false)
-  const [showUI, setShowUI] = useState(false)
+  const [showUIState, setShowUIState] = useState(false)
   const fadeTimers = useRef<{ hero?: NodeJS.Timeout; ui?: NodeJS.Timeout }>({})
   // Staged fade-in logic for hero text and UI after map expands
   useEffect(() => {
@@ -46,7 +46,7 @@ export const HelsinkiViewer = ({ shouldLoad = true, shouldPause = false, scrollP
     if (scrollProgress >= 1) {
       // Reset states in case of repeated triggers
       setShowHeroText(false)
-      setShowUI(false)
+      setShowUIState(false)
       // Clear any previous timers
       if (fadeTimers.current.hero) clearTimeout(fadeTimers.current.hero)
       if (fadeTimers.current.ui) clearTimeout(fadeTimers.current.ui)
@@ -56,12 +56,12 @@ export const HelsinkiViewer = ({ shouldLoad = true, shouldPause = false, scrollP
       }, 1000)
       // UI after 2.2s (1s + 1.2s)
       fadeTimers.current.ui = setTimeout(() => {
-        setShowUI(true)
+        setShowUIState(true)
       }, 2200)
     } else {
       // If user scrolls back, hide all and clear timers
       setShowHeroText(false)
-      setShowUI(false)
+      setShowUIState(false)
       if (fadeTimers.current.hero) clearTimeout(fadeTimers.current.hero)
       if (fadeTimers.current.ui) clearTimeout(fadeTimers.current.ui)
     }
@@ -192,7 +192,7 @@ export const HelsinkiViewer = ({ shouldLoad = true, shouldPause = false, scrollP
 
   // Wheel event listener to control grayscale slider - bidirectional and very gradual
   useEffect(() => {
-    if (!showUI) return;
+    if (!showUIState) return;
     const handleWheel = (event: WheelEvent) => {
       setGrayscaleAmount(prev => {
         // Scroll down (positive deltaY) = reduce grayscale
@@ -294,7 +294,7 @@ export const HelsinkiViewer = ({ shouldLoad = true, shouldPause = false, scrollP
       <div
         className="logo-container"
         style={{
-          opacity: showUI ? 1 : 0,
+          opacity: showUIState ? 1 : 0,
           transition: 'opacity 0.5s ease',
           pointerEvents: 'none',
         }}
@@ -306,7 +306,7 @@ export const HelsinkiViewer = ({ shouldLoad = true, shouldPause = false, scrollP
       <div
         className="hamburger-menu"
         style={{
-          opacity: showUI ? 1 : 0,
+          opacity: showUIState ? 1 : 0,
           transition: 'opacity 0.5s ease',
           pointerEvents: 'none',
         }}
@@ -318,7 +318,7 @@ export const HelsinkiViewer = ({ shouldLoad = true, shouldPause = false, scrollP
       <div
         className="ui-overlay"
         style={{
-          opacity: showUI ? 1 : 0,
+          opacity: showUIState ? 1 : 0,
           transition: 'opacity 0.5s ease',
           pointerEvents: 'none',
         }}
@@ -347,7 +347,7 @@ export const HelsinkiViewer = ({ shouldLoad = true, shouldPause = false, scrollP
       </div>
 
       {/* POI Navigator - Bottom navigation bar */}
-      {showUI && (
+      {showUIState && (
         <POINavigator onPOISelect={handlePOISelect} initialPOI="FOUNDERS_HOUSE" />
       )}
 

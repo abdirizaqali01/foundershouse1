@@ -21,9 +21,10 @@ interface HelsinkiViewerProps {
   shouldPause?: boolean
   scrollProgress?: number
   onMapLoadingChange?: (state: MapLoadingState) => void
+  showUI?: boolean
 }
 
-export const HelsinkiViewer = ({ shouldLoad = true, shouldPause = false, scrollProgress = 0, onMapLoadingChange }: HelsinkiViewerProps) => {
+export const HelsinkiViewer = ({ shouldLoad = true, shouldPause = false, scrollProgress = 0, onMapLoadingChange, showUI = false }: HelsinkiViewerProps) => {
   const containerRef = useRef<HTMLDivElement>(null)
   const sceneRef = useRef<HelsinkiScene | null>(null)
   const animationFrameRef = useRef<number>(0)
@@ -191,6 +192,7 @@ export const HelsinkiViewer = ({ shouldLoad = true, shouldPause = false, scrollP
 
   // Wheel event listener to control grayscale slider - bidirectional and very gradual
   useEffect(() => {
+    if (!showUI) return;
     const handleWheel = (event: WheelEvent) => {
       setGrayscaleAmount(prev => {
         // Scroll down (positive deltaY) = reduce grayscale
@@ -208,13 +210,12 @@ export const HelsinkiViewer = ({ shouldLoad = true, shouldPause = false, scrollP
 
   // Apply grayscale dynamically to canvas
   useEffect(() => {
-    if (!containerRef.current) return
-
-    const canvas = containerRef.current.querySelector('canvas')
+    if (!containerRef.current) return;
+    const canvas = containerRef.current.querySelector('canvas');
     if (canvas) {
       canvas.style.filter = `grayscale(${grayscaleAmount}%) brightness(1.50) contrast(0.88)` // BRIGHTNESS: Moderate 1.50 (was 1.38 too dark, 1.65 too bright)
     }
-  }, [grayscaleAmount])
+  }, [grayscaleAmount]);
 
 
   // Independent ticker animation - runs smoothly from 0-100 over ~2.5 seconds
@@ -226,21 +227,18 @@ export const HelsinkiViewer = ({ shouldLoad = true, shouldPause = false, scrollP
     const UPDATE_INTERVAL = 16 // ~60fps (16ms per frame)
 
     const tick = () => {
-      const elapsed = Date.now() - tickerStartTimeRef.current
-      const timeBasedProgress = Math.min((elapsed / TICKER_DURATION) * 100, 100)
-
+      const elapsed = Date.now() - tickerStartTimeRef.current;
+      const timeBasedProgress = Math.min((elapsed / TICKER_DURATION) * 100, 100);
       setTickerProgress((prev) => {
         // Smoothly interpolate towards time-based progress
-        const target = timeBasedProgress
-        const distance = target - prev
-
-        if (Math.abs(distance) < 0.1) return target
-
+        const target = timeBasedProgress;
+        const distance = target - prev;
+        if (Math.abs(distance) < 0.1) return target;
         // Smooth easing
-        const increment = distance * 0.1
-        return prev + increment
-      })
-    }
+        const increment = distance * 0.1;
+        return prev + increment;
+      });
+    };
 
     // Use setInterval instead of requestAnimationFrame to continue in background
     const intervalId = setInterval(tick, UPDATE_INTERVAL)

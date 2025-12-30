@@ -8,6 +8,8 @@ import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js'
 import { COLORS } from '../constants/designSystem'
 
 export function setupPostProcessing(renderTarget: THREE.WebGLRenderTarget, perlinTexture: THREE.DataTexture) {
+  const perfStart_postProcessing = performance.now();
+  console.log('[PERF] postProcessing.ts: setupPostProcessing start:', perfStart_postProcessing);
   const scene = new THREE.Scene()
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1)
 
@@ -22,6 +24,7 @@ export function setupPostProcessing(renderTarget: THREE.WebGLRenderTarget, perli
       uTime: { value: 0 },
       uPencilStrength: { value: 1.0 },
       uResolution: { value: new THREE.Vector2(window.innerWidth * window.devicePixelRatio, window.innerHeight * window.devicePixelRatio) },
+      uContrast: { value: 3.0 }, // Default contrast
     },
     vertexShader: postProcessVertexShader,
     fragmentShader: postProcessFragmentShader,
@@ -31,10 +34,14 @@ export function setupPostProcessing(renderTarget: THREE.WebGLRenderTarget, perli
   const quad = new THREE.Mesh(geometry, material)
   scene.add(quad)
 
+  const perfEnd_postProcessing = performance.now();
+  console.log('[PERF] postProcessing.ts: setupPostProcessing end:', perfEnd_postProcessing, 'duration:', (perfEnd_postProcessing - perfStart_postProcessing).toFixed(2), 'ms');
   return { scene, camera, material }
 }
 
 export function setupComposer(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.PerspectiveCamera, postProcessMaterial: THREE.ShaderMaterial) {
+  const perfStart_composer = performance.now();
+  console.log('[PERF] postProcessing.ts: setupComposer start:', perfStart_composer);
   try {
     const composer = new EffectComposer(renderer)
     const renderPass = new RenderPass(scene, camera)
@@ -51,8 +58,12 @@ export function setupComposer(renderer: THREE.WebGLRenderer, scene: THREE.Scene,
     shaderPass.renderToScreen = true
     composer.addPass(shaderPass)
 
+    const perfEnd_composer = performance.now();
+    console.log('[PERF] postProcessing.ts: setupComposer end:', perfEnd_composer, 'duration:', (perfEnd_composer - perfStart_composer).toFixed(2), 'ms');
     return { composer, bloomPass: null }
   } catch (err) {
+    const perfEnd_composer = performance.now();
+    console.log('[PERF] postProcessing.ts: setupComposer end (error):', perfEnd_composer, 'duration:', (perfEnd_composer - perfStart_composer).toFixed(2), 'ms');
     return { composer: null, bloomPass: null }
   }
 }

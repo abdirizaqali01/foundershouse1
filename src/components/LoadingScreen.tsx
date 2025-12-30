@@ -69,7 +69,9 @@ export const LoadingScreen = ({ onComplete, duration, scrollProgress }: LoadingS
 
   // Loading bar tied to actual map loading progress
   useEffect(() => {
-    if (scrollProgress > 0) return
+    const MIN_LOADING_TIME = 10; // 0.5s
+    const startTime = Date.now();
+    let cancelled = false;
 
     // Update target loading bar based on map progress
     setLoadingBarProgress(mapLoadingState.progress)
@@ -125,10 +127,14 @@ export const LoadingScreen = ({ onComplete, duration, scrollProgress }: LoadingS
       for (let j = 0; j < rows; j++) {
         // Overlap amount in percent
         const overlap = 0.15;
+        // Overlap amount in percent
+        const overlap = 0.15;
         blockPositions.push({
           id: i * rows + j,
           x: i * blockWidth,
           y: j * blockHeight,
+          width: i === cols - 1 ? 100 - i * blockWidth : blockWidth + overlap,
+          height: j === rows - 1 ? 100 - j * blockHeight : blockHeight + overlap,
           width: i === cols - 1 ? 100 - i * blockWidth : blockWidth + overlap,
           height: j === rows - 1 ? 100 - j * blockHeight : blockHeight + overlap,
           delay: 0
@@ -156,6 +162,7 @@ export const LoadingScreen = ({ onComplete, duration, scrollProgress }: LoadingS
   // JASON'S STAGE TRANSITIONS - map-slide-in and map-expand timing
   useEffect(() => {
     if (!canProceedToBlur) return
+    if (!canProceedToBlur) return
 
     // Record start time for time-based stage transitions
     const startTime = Date.now()
@@ -169,9 +176,17 @@ export const LoadingScreen = ({ onComplete, duration, scrollProgress }: LoadingS
       } else if (elapsed >= 1300 && elapsed < 2800) {
         setStage('pixel-out-to-text1')
       } else if (elapsed >= 2800 && elapsed < 6800) {
+      } else if (elapsed >= 2800 && elapsed < 6800) {
         setStage('text1')
       } else if (elapsed >= 6800 && elapsed < 9000) {
+      } else if (elapsed >= 6800 && elapsed < 9000) {
         setStage('text2')
+      } else if (elapsed >= 9000 && elapsed < 9500) {
+        setStage('map-slide-in')
+      } else if (elapsed >= 11500 && elapsed < 13000) {
+        setStage('map-expand')
+      } else if (elapsed >= 13000) {
+        setStage('complete')
       } else if (elapsed >= 9000 && elapsed < 9500) {
         setStage('map-slide-in')
       } else if (elapsed >= 11500 && elapsed < 13000) {
@@ -232,6 +247,8 @@ export const LoadingScreen = ({ onComplete, duration, scrollProgress }: LoadingS
       style={{
         pointerEvents: 'auto',
         zIndex: 10000,
+        pointerEvents: 'auto',
+        zIndex: 10000,
         background: 'transparent'
       }}
     >
@@ -279,6 +296,11 @@ export const LoadingScreen = ({ onComplete, duration, scrollProgress }: LoadingS
 
         {/* Stage 1 & 2: Logo + Loading Bar (on top of background) */}
         {showLogo && (
+          <div
+            className={`loading-logo ${shouldBlurLogo ? 'blur-out' : ''}`}
+            style={{ height: '76px', width: 'auto' }}
+          >
+            <img src="/fhlogo_horizontal.png" alt="Founders House" style={{ height: '100%', width: 'auto', display: 'block' }} />
           <div
             className={`loading-logo ${shouldBlurLogo ? 'blur-out' : ''}`}
             style={{ height: '76px', width: 'auto' }}

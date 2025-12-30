@@ -75,17 +75,22 @@ export class HelsinkiScene {
 
     // Initialize scene
     this.scene = new THREE.Scene()
+    // --- PERFORMANCE PROFILING ---
+    let perfStart_sceneSetup = performance.now();
     this.scene.background = this.isNightMode
       ? new THREE.Color(COLORS.night.sky)
       : new THREE.Color(COLORS.day.sky)
 
     // Create camera using helper
+    console.log('[PERF] Scene setup start:', perfStart_sceneSetup);
     this.camera = createCamera()
 
     // Create renderer using helper
     this.renderer = createRenderer(config.container)
 
+    let perfStart_renderer = performance.now();
     // Setup controls
+    console.log('[PERF] Renderer setup start:', perfStart_renderer);
     this.controls = new HelsinkiCameraController(this.camera, this.renderer.domElement)
     configureCameraControls(this.controls)
 
@@ -98,10 +103,12 @@ export class HelsinkiScene {
     // Setup post-processing
     const { material: ppMaterial } = setupPostProcessing(this.renderTarget, this.perlinTexture)
     this.postProcessMaterial = ppMaterial
+    let perfStart_postProcessing = performance.now();
     const composerResult = setupComposer(this.renderer, this.scene, this.camera, this.postProcessMaterial)
     this.composer = composerResult.composer
 
     setupSceneLighting(this.scene)
+    console.log('[PERF] Post-processing setup start:', perfStart_postProcessing);
 
     // Setup fog
     this.fog = setupSceneFog(this.scene, this.isNightMode)
@@ -150,6 +157,7 @@ export class HelsinkiScene {
           this.addCityLightsPoints(400)
         } catch (e) {
           // Failed to add city lights
+      console.log('[PERF] Model loading start:', perfStart_modelLoading);
         }
       }
 

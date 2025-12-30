@@ -98,6 +98,7 @@ export class HelsinkiCameraController {
   private dragTargetPosition: THREE.Vector3 = new THREE.Vector3();
 
   constructor(camera: THREE.PerspectiveCamera, domElement: HTMLElement) {
+    const perfStart_cameraController = performance.now();
     this.camera = camera
     this.domElement = domElement
     
@@ -139,6 +140,8 @@ export class HelsinkiCameraController {
     this.dragTargetPosition.copy(this.camera.position);
     // In constructor, initialize desiredCameraPosition
     this.desiredCameraPosition.copy(this.camera.position);
+    const perfEnd_cameraController = performance.now();
+    console.log('[PERF] HelsinkiCameraController setup duration:', (perfEnd_cameraController - perfStart_cameraController).toFixed(2), 'ms');
   }
 
   /**

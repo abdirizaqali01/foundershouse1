@@ -294,9 +294,12 @@
   position: relative;
   z-index: 2;
   transition: all 4.5s cubic-bezier(0.23, 0.26, 0, 1);
+  transition: all 4.5s cubic-bezier(0.23, 0.26, 0, 1);
 }
 
 .loading-logo.blur-out {
+  filter: blur(15px);
+  opacity: 0;
   filter: blur(15px);
   opacity: 0;
 }
@@ -311,6 +314,7 @@
   bottom: 80px;
   left: 50%;
   transform: translateX(-50%);
+  width: 45%;
   width: 45%;
   max-width: 90vw;
   height: 2px;
@@ -344,6 +348,7 @@
   position: absolute;
   background: #590D0F; /* Dark red */
   opacity: 0;
+  box-sizing: border-box;
   box-sizing: border-box;
 }
 
@@ -413,6 +418,7 @@
 .text-page::after {
   right: 1.5rem;
   animation: fadeInCornerElements 0.2s ease-out forwards;
+  animation: fadeInCornerElements 0.2s ease-out forwards;
   background: #FFFFFF;
   height: 1px;
   bottom: 1.5rem;
@@ -425,10 +431,17 @@
   top: 0;
   width: 100vw;
   height: 100vh;
+  left: 0;
+  top: 0;
+  width: 100vw;
+  height: 100vh;
   background: #000000;
   z-index: 2;
   opacity: 1;
+  opacity: 1;
   overflow: hidden;
+  will-change: top;
+  transform: none;
   will-change: top;
   transform: none;
   backface-visibility: hidden;
@@ -436,6 +449,9 @@
 }
 
 /* Text gets pushed by the map - v2 higher specificity */
+.text-centered.align-left.text-pushed-by-box {
+  transform: translateY(calc(-22vh));
+  transition: transform 1.4s cubic-bezier(0.3, 0.43, 0, 1);
 .text-centered.align-left.text-pushed-by-box {
   transform: translateY(calc(-22vh));
   transition: transform 1.4s cubic-bezier(0.3, 0.43, 0, 1);
@@ -475,6 +491,22 @@
     height: 50vh;
     transform: translateX(-50%);
     /* transition matches .map-container for smoothness */
+    transition:
+      width 1s cubic-bezier(0.4, 0, 0.2, 1),
+      left 1s cubic-bezier(0.4, 0, 0.2, 1),
+      top 1s cubic-bezier(0.4, 0, 0.2, 1),
+      height 1s cubic-bezier(0.4, 0, 0.2, 1),
+      transform 1s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Step 1.5: Pause at halfway (50% height from top) */
+  .map-container.halfway {
+    top: 40vh;
+    left: 50%;
+    width: 90vw;
+    height: 50vh;
+    transform: translateX(-50%);
+    /* transition matches .map-container for smoothness */
   margin-top: 1rem;
 }
 
@@ -487,11 +519,13 @@
   text-align: center;
   opacity: 1;
   overflow: hidden;
+  overflow: hidden;
 }
 
 /* Fade-in animation for text with ease-out timing */
 .fade-in-text {
   display: inline-block;
+  animation: fadeInEaseOut 3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   animation: fadeInEaseOut 3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   opacity: 0;
 }
@@ -507,6 +541,13 @@
     height: 100vh;
     transform: translateX(-50%);
   }
+  0% {
+    top: 40vh;
+    left: 50%;
+    width: 90vw;
+    height: 100vh;
+    transform: translateX(-50%);
+  }
 }
 
 .text-page .text-centered div {
@@ -514,6 +555,7 @@
   font-weight: 700;
   font-size: clamp(2.5rem, 6vw, 5rem);
   color: #FFFFFF;
+  letter-spacing: -0.02em;
   letter-spacing: -0.02em;
   text-transform: uppercase;
   line-height: 1;
@@ -580,6 +622,11 @@
   letter-spacing: 0.1em;
   text-transform: uppercase;
   opacity: 0;
+}
+
+.text-page .corner-label.fade-in {
+  animation: fadeInCornerElements 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation-delay: 0.4s;
 }
 
 .text-page .corner-label.fade-in {
@@ -691,6 +738,7 @@
 @media (prefers-reduced-motion: no-preference) {
   .map-container.sliding-up {
     animation-timing-function: cubic-bezier(0.11, 0.43, 0, 1); /* Smoother easing */
+    animation-timing-function: cubic-bezier(0.11, 0.43, 0, 1); /* Smoother easing */
   }
 }
 
@@ -725,6 +773,7 @@
 }
 
 /* Fade into the box at bottom */
+
 
 
 /* Slide map up from box to 67vh - smooth continuous growth */

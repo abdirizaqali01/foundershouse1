@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { HelsinkiViewer } from './HelsinkiViewer'
 import './LoadingScreen.css'
 
@@ -43,47 +43,29 @@ export const LoadingScreen = ({ onComplete, duration, scrollProgress }: LoadingS
   const [smoothLoadingBarProgress, setSmoothLoadingBarProgress] = useState(0)
   const [canProceedToBlur, setCanProceedToBlur] = useState(false)
 
-  // YOUR IMAGE CYCLING - All images now optimized as WebP
-  const [loadingImages] = useState(() => {
-    const images = [
-      '/LoadInImage-min.webp',
-      '/The Legends Day.webp',
-      '/Wave x Maki Photo (2).webp',
-      '/Wave x Maki Photo.webp',
-      '/Legends Day Still 002.webp',
-      '/Legends Day Still 014.webp'
-    ]
-    // Shuffle for variety since all images are now optimized
-    return images.sort(() => Math.random() - 0.5)
-  })
+  // YOUR IMAGE CYCLING - All images now optimized as WebP, no shuffle, no preload
+  const loadingImages = [
+    '/LoadInImage-min.webp',
+    '/The Legends Day.webp',
+    '/Wave x Maki Photo (2).webp',
+    '/Wave x Maki Photo.webp',
+    '/Legends Day Still 002.webp',
+    '/Legends Day Still 014.webp'
+  ];
 
   // Start with first image from shuffled array
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
-  const [previousImageIndex, setPreviousImageIndex] = useState(0)
-  const [isFirstImage, setIsFirstImage] = useState(true)
 
-  // YOUR IMAGE CYCLING LOGIC - Cycle through images every 600ms with crossfade
+  // Simple image cycling: change every 600ms in order
   useEffect(() => {
-    if (scrollProgress > 0 || stage !== 'logo-loading') return
+    if (scrollProgress > 0 || stage !== 'logo-loading') return;
 
-    const startTime = Date.now()
-    let lastChangeTime = startTime
+    const interval = setInterval(() => {
+      setCurrentImageIndex((prev) => (prev + 1) % loadingImages.length);
+    }, 600);
 
-    const checkInterval = setInterval(() => {
-      const now = Date.now()
-      const elapsed = now - lastChangeTime
-
-      // Change image exactly every 600ms based on timestamp
-      if (elapsed >= 600) {
-        setIsFirstImage(false)
-        setPreviousImageIndex(currentImageIndex)
-        setCurrentImageIndex((prev) => (prev + 1) % loadingImages.length)
-        lastChangeTime = now
-      }
-    }, 16) // Check every 16ms (~60fps) for smooth timing
-
-    return () => clearInterval(checkInterval)
-  }, [scrollProgress, stage, loadingImages.length, currentImageIndex])
+    return () => clearInterval(interval);
+  }, [scrollProgress, stage, loadingImages.length]);
 
   // Loading bar tied to actual map loading progress
   useEffect(() => {
@@ -284,21 +266,11 @@ export const LoadingScreen = ({ onComplete, duration, scrollProgress }: LoadingS
         {/* Background layer: YOUR CYCLING LOADING IMAGES WITH CROSSFADE - Always visible during initial stages */}
         {showBackgroundImage && (
           <div className="loading-background-image">
-            {/* Previous image - stays visible underneath (only show after first transition) */}
-            {!isFirstImage && (
-              <img
-                key={`prev-${previousImageIndex}`}
-                src={loadingImages[previousImageIndex]}
-                alt="Founders House"
-                className="background-image-layer background-image-previous"
-              />
-            )}
-            {/* Current image - fades in on top (except first image which appears immediately) */}
             <img
               key={`curr-${currentImageIndex}`}
               src={loadingImages[currentImageIndex]}
               alt="Founders House"
-              className={`background-image-layer ${isFirstImage ? 'background-image-first' : 'background-image-current'}`}
+              className="background-image-layer background-image-current"
               loading="eager"
               fetchPriority="high"
             />
@@ -345,16 +317,8 @@ export const LoadingScreen = ({ onComplete, duration, scrollProgress }: LoadingS
           style={{
             visibility: (stage === 'map-slide-in' || stage === 'map-expand' || stage === 'complete') ? 'visible' : 'hidden',
             pointerEvents: (stage === 'map-slide-in' || stage === 'map-expand' || stage === 'complete') ? 'auto' : 'none',
-            position: 'fixed',
-            left: 0,
-            top: 0,
-            width: '100vw',
-            height: '100vh',
-            zIndex: 2,
-            background: 'transparent',
-            opacity: 1,
-            overflow: 'hidden',
-            transition: 'none',
+            left: '50%',
+            transform: 'translateX(-50%) scaleX(1)',
           }}
         >
           <div className={`helsinki-zoom-wrapper${stage === 'map-slide-in' ? ' zoomed-in' : ''}${stage === 'map-expand' ? ' zooming-out' : ''}`}

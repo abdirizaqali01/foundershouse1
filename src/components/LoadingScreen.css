@@ -3,7 +3,7 @@
   width: 100%;
   height: 100%;
   transform: scale(1);
-  transition: transform 2.6s cubic-bezier(.4,.25,0,1);
+  transition: transform 2.6s cubic-bezier(.2,.25,0,1);
   will-change: transform;
 }
 .helsinki-zoom-wrapper.zoomed-in {
@@ -61,7 +61,7 @@
   position: fixed;
   top: 40vh;
   left: 50%;
-  width: 90vw;
+  width: 100vw;
   height: 100vh;
   background: transparent;
   z-index: 2;
@@ -69,24 +69,25 @@
   animation: mapExpandToFull 1.2s cubic-bezier(.4,.25,0,1) forwards;
   will-change: top, left, width, height, transform;
   overflow: hidden;
-  transform: translateX(-50%);
+  transform: translateX(-50%) scaleX(0.9);
   transition: none;
+  transform-origin: top center;
 }
 
 @keyframes mapExpandToFull {
   0% {
     top: 40vh;
     left: 50%;
-    width: 90vw;
+    width: 100vw;
     height: 100vh;
-    transform: translateX(-50%);
+    transform: translateX(-50%) scaleX(0.9);
   }
   100% {
     top: 0;
-    left: 0;
+    left: 50%;
     width: 100vw;
     height: 100vh;
-    transform: none;
+    transform: translateX(-50%) scaleX(1);
   }
 }
 .text-page .corner-label.fade-in-persist {
@@ -115,7 +116,7 @@
   position: fixed;
   top: 100vh;
   left: 50%;
-  width: 90vw;
+  width: 100vw;
   height: 100vh;
   background: transparent;
   z-index: 2;
@@ -123,7 +124,7 @@
   animation: mapSlideInToForty 1.8s cubic-bezier(0.3, 0.43, 0, 1) forwards;
   will-change: top, left, width, transform;
   overflow: hidden;
-  transform: translateX(-50%);
+  transform: translateX(-50%) scaleX(0.9);
   transition: none;
 }
 
@@ -131,16 +132,16 @@
   0% {
     top: 100vh;
     left: 50%;
-    width: 90vw;
+    width: 100vw;
     height: 100vh;
-    transform: translateX(-50%);
+    transform: translateX(-50%) scaleX(0.9);
   }
   100% {
     top: 40vh;
     left: 50%;
-    width: 90vw;
+    width: 100vw;
     height: 100vh;
-    transform: translateX(-50%);
+    transform: translateX(-50%) scaleX(0.9);
   }
 }
 .fade-up-text {
@@ -252,9 +253,10 @@
   /* No animation for first image - appears instantly */
 }
 
+
 .background-image-current {
   z-index: 2;
-  animation: crossfadeIn 0.6s ease-in-out;
+  /* No animation for snappy transition */
 }
 
 @keyframes crossfadeIn {

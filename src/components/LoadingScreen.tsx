@@ -53,19 +53,8 @@ export const LoadingScreen = ({ onComplete, duration, scrollProgress }: LoadingS
     '/Legends Day Still 014.webp'
   ];
 
-  // Start with first image from shuffled array
-  const [currentImageIndex, setCurrentImageIndex] = useState(0)
-
-  // Simple image cycling: change every 600ms in order
-  useEffect(() => {
-    if (scrollProgress > 0 || stage !== 'logo-loading') return;
-
-    const interval = setInterval(() => {
-      setCurrentImageIndex((prev) => (prev + 1) % loadingImages.length);
-    }, 600);
-
-    return () => clearInterval(interval);
-  }, [scrollProgress, stage, loadingImages.length]);
+  // Pick a single random image at mount and keep it for the duration of stage 1
+  const [currentImageIndex] = useState(() => Math.floor(Math.random() * loadingImages.length));
 
   // Loading bar tied to actual map loading progress
   useEffect(() => {

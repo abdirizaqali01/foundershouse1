@@ -257,6 +257,8 @@
 .background-image-current {
   z-index: 2;
   /* No animation for snappy transition */
+
+  filter: brightness(0.4);
 }
 
 @keyframes crossfadeIn {

@@ -36,6 +36,8 @@ export interface SceneConfig {
   isNightMode?: boolean
   onLoadProgress?: (progress: number) => void
   onLoadComplete?: () => void
+  staticMode?: boolean
+  environmentColor?: string
 }
 
 export class HelsinkiScene {
@@ -77,9 +79,13 @@ export class HelsinkiScene {
     this.scene = new THREE.Scene()
     // --- PERFORMANCE PROFILING ---
     let perfStart_sceneSetup = performance.now();
-    this.scene.background = this.isNightMode
-      ? new THREE.Color(COLORS.night.sky)
-      : new THREE.Color(COLORS.day.sky)
+    if (config.environmentColor) {
+      this.scene.background = new THREE.Color(config.environmentColor)
+    } else {
+      this.scene.background = this.isNightMode
+        ? new THREE.Color(COLORS.night.sky)
+        : new THREE.Color(COLORS.day.sky)
+    }
 
     // Create camera using helper
     console.log('[PERF] Scene setup start:', perfStart_sceneSetup);
@@ -91,8 +97,10 @@ export class HelsinkiScene {
     let perfStart_renderer = performance.now();
     // Setup controls
     console.log('[PERF] Renderer setup start:', perfStart_renderer);
-    this.controls = new HelsinkiCameraController(this.camera, this.renderer.domElement)
-    configureCameraControls(this.controls)
+    this.controls = new HelsinkiCameraController(this.camera, this.renderer.domElement, config.staticMode)
+    if (!config.staticMode) {
+      configureCameraControls(this.controls)
+    }
 
     // Create render target using helper
     this.renderTarget = createRenderTarget()
@@ -126,8 +134,10 @@ export class HelsinkiScene {
 
     this.foundersHouseMarker = new FoundersHouseMarker()
 
-    // Setup interaction event listeners
-    this.setupInteractionListeners()
+    // Setup interaction event listeners only if not staticMode
+    if (!config.staticMode) {
+      this.setupInteractionListeners()
+    }
 
     // Load models (main map + fog tiles)
     loadDualModels({

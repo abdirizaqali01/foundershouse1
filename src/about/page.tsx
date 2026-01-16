@@ -1,22 +1,42 @@
 
-import React, { useEffect, useState } from "react";
-import { motion, AnimatePresence, useScroll } from "framer-motion";
+import React, { useEffect, useRef, useState } from "react";
+import { motion, AnimatePresence, useScroll, useAnimation } from "framer-motion";
 import { useMotionValue, useTransform } from "framer-motion";
 import GridDistortion from '../effects/GridDistortion.tsx';
 import ParallaxMotion from '../effects/ParallaxMotion.tsx';
 import "./page.css";
+import { HelsinkiViewer } from "../components/HelsinkiViewer.tsx";
+import HelsinkiViewerSimple from "../components/HelsinkiViewerSimple.tsx";
 
 const HEADER_IMG_SRC = "/The Legends Day.webp";
 const SECTION2_IMG_SRC = "/Wave x Maki Photo (2).webp";
+const SECTION3_IMG_1_SRC = "/Legends Day Still 002.webp";
+const SECTION3_IMG_2_SRC = "/Wave x Maki Photo.webp";
+const SECTION3_IMG_3_SRC = "/LoadInImage-min.webp";
 const SECTION4_IMG_SRC = "/Legends Day Still 014.webp";
+const SECTION5_MAP_IMG_SRC = "/2D_map.png";
 
 export default function AboutPage() {
+  // Scroll progress for HelsinkiViewerSimple
+  const [scrollProgress, setScrollProgress] = useState(0);
+
   const [stage, setStage] = useState(1);
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollY = window.scrollY;
+      const docHeight = document.body.scrollHeight - window.innerHeight;
+      const progress = docHeight > 0 ? Math.min(scrollY / docHeight, 1) : 0;
+      setScrollProgress(progress);
+    };
+    window.addEventListener("scroll", handleScroll);
+    handleScroll(); // Initial value
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   // Parallax setup
   const yScroll = useMotionValue(0);
   // Parallax: image moves at 40% scroll speed in stage 2
   const parallaxY = useTransform(yScroll, (v) => stage === 2 ? v * 0.4 : 0);
-
 
   //--------------------------------------//
   // Parallax on Elements Settings //
@@ -24,12 +44,40 @@ export default function AboutPage() {
   const { scrollY } = useScroll();
   const headerBG = useTransform(scrollY, [0, 1000], [0, 200]);
   const headerContent = useTransform(scrollY, [0, 1000], [0, 100]);
-  const section2BG = useTransform(scrollY, [0, 1500], [-400, 100]);
+  /* Section 2 */
+  const section2BG = useTransform(scrollY, [0, 1500], [-300, 50]);
   const section2Content = useTransform(scrollY, [0, 1500], [-150, 200]);
+  /* Section 3 */
   const section3 = useTransform(scrollY, [0, 1800], [0, 0]);
+  const section3img1 = useTransform(scrollY, [0, 1800], [0, -100]);
+  const section3img2 = useTransform(scrollY, [0, 1800], [500, -260]);
+  const section3img3 = useTransform(scrollY, [0, 1800], [350, -240]);
+  const section3text = useTransform(scrollY, [0, 1800], [0, -150]);
+  /* Section 4 */
   const section4 = useTransform(scrollY, [0, 0], [0, 0]);
-  const section4BG = useTransform(scrollY, [0, 2500], [-1200, 50]);
+  const section4BG = useTransform(scrollY, [0, 2500], [-500, -50]);
   const section4Content = useTransform(scrollY, [0, 2500], [-100, 100]);
+
+  const section3Ref = useRef<HTMLDivElement>(null);
+  const revealerControls = useAnimation();
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!section3Ref.current) return;
+      const rect = section3Ref.current.getBoundingClientRect();
+      const windowHeight = window.innerHeight;
+      // When the top of section-3 is above the bottom by half its height
+      if (rect.top < windowHeight - rect.height / 8) {
+        revealerControls.start({ y: "100%" }); // Move up (adjust as needed)
+      } else {
+        revealerControls.start({ y: "0%" }); // Original position
+      }
+    };
+    window.addEventListener("scroll", handleScroll);
+    // Initial check
+    handleScroll();
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [revealerControls]);
 
   // Transition from stage 1 to stage 2 after a delay
   useEffect(() => {
@@ -40,7 +88,7 @@ export default function AboutPage() {
   }, [stage]);
 
   return (
-    <div style={{ position: "relative", maxWidth: "100%", minHeight: "100vh", background: "#af4f47" }}>
+    <div style={{ position: "relative", maxWidth: "100%", minHeight: "100vh", background: "#2B0906" }}>
       {/* Persistent animated image container */}
       <motion.div
         className="stage1-img-container"
@@ -75,7 +123,7 @@ export default function AboutPage() {
             ? { width: "100%", top: 0, objectFit: "cover", scale: 1 }
             : { width: "100%", top: 0, objectFit: "cover", scale: 0.9 }
           }
-          transition={{ delay: 0.1, duration: 1.8, ease: [0.32, 0.26, 0, 1] }}
+          transition={{ delay: 0.1, duration: 1.8, ease: [0.22, 0.26, 0, 1] }}
         >
           <div className="stage1-text-overlay-wrapper">
             <motion.h2 
@@ -159,10 +207,11 @@ export default function AboutPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             style={{ position: "relative", width: "100%", zIndex: 4 }}
+            className="stage2-wrapper"
           >
-            <div className="header-wrapper">
+            <div className="header-wrapper" style={{pointerEvents: "none"}}>
               <motion.div className="header-content" style={{ y: headerContent }}>
-                <ParallaxMotion speedX={30} speedY={15} easing={[0.37, 0.67, 0.3, 0.67]} delay={10}>
+                <ParallaxMotion speedX={30} speedY={15} easing={[0.17, 0.67, 0.3, 0.99]} delay={10}>
                   <div className="header-h1-wrapper">
                     <motion.h1
                       className="header-h1"
@@ -175,7 +224,7 @@ export default function AboutPage() {
                   </div>
                 </ParallaxMotion>
                 <div className="header-h3-wrapper">
-                  <ParallaxMotion speedX={40} speedY={25} easing={[0.27, 0.67, 0.3, 0.67]}>
+                  <ParallaxMotion speedX={40} speedY={25} easing={[0.17, 0.67, 0.3, 0.99]}>
                     <motion.h3
                       className="header-h3"
                       initial={{ opacity: 0 }}
@@ -194,6 +243,7 @@ export default function AboutPage() {
                 className="section-2-bg-container"
                 style={{ y: section2BG }}
               >
+                {/*  
                 <GridDistortion
                   imageSrc={SECTION2_IMG_SRC}
                   grid={20}
@@ -202,37 +252,82 @@ export default function AboutPage() {
                   relaxation={0.96}
                   className="section-2-bg"
                 />
+                */}
+                <ParallaxMotion speedX={20} speedY={15} easing={[0.22, 0.67, 0.3, 0.99]} delay={12}>
+                  <motion.img
+                    className="section-2-bg"
+                    src={SECTION2_IMG_SRC}
+                    alt="About"
+                    style={{ scale: 1.05 }}
+                  />
+                </ParallaxMotion>
               </motion.div>        
               
                 <motion.div className="section-2-content" style={{ y: section2Content }}>
-                  <ParallaxMotion speedX={30} speedY={30} easing={[0.37, 0.67, 0.3, 0.67]}>
+                  <ParallaxMotion speedX={30} speedY={32} easing={[0.17, 0.67, 0.3, 0.99]}>
                     <p>Founders House Helsinki is the hub for Finland’s most promising next-gen startups. A home for builders who move faster than anyone else, think differently, and raise the bar for everyone around them.</p>
                   </ParallaxMotion>
                 </motion.div>
             </div>
 
-            <motion.div className="section-3" style={{ y: section3 }}>
+            <motion.div className="section-3" style={{ y: section3 }} ref={section3Ref}>
+              <motion.div
+                className="section-3-revealer"
+                animate={revealerControls}
+                transition={{ type: "tween", duration: 0.8, ease: [0.22, 0.67, 0.3, 0.99] }}
+              />
               <div className="section-3-content">
                 <div className="img-container">
-                  <img className="img-1" src={SECTION2_IMG_SRC} />
-                  <img className="img-2" src={SECTION2_IMG_SRC} />
-                  <img className="img-3" src={SECTION2_IMG_SRC} />
+                  <ParallaxMotion speedX={15} speedY={15} delay={0}>
+                    <motion.img className="img-1" src={SECTION3_IMG_1_SRC} style={{ y: section3img1 }} />
+                  </ParallaxMotion>
+                  <ParallaxMotion speedX={26} speedY={26} delay={5}>  
+                    <motion.img className="img-2" src={SECTION3_IMG_2_SRC} style={{ y: section3img2 }} />
+                  </ParallaxMotion>
+                  <ParallaxMotion speedX={42} speedY={42} delay={10}>
+                    <motion.img className="img-3" src={SECTION3_IMG_3_SRC} style={{ y: section3img3 }} />
+                  </ParallaxMotion>
                 </div>
-                <p>We're here to support them through a tight-knit community shaped by high ambition, collaboration, and shared energy—all under one roof. Here collisions happen naturally, where potential multiplies, and where the right people find each other.</p>
+                <ParallaxMotion speedX={70} speedY={70} delay={5}>
+                  <motion.p style={{ y: section3text }}>We're here to support them through a tight-knit community shaped by high ambition, collaboration, and shared energy—all under one roof. Here collisions happen naturally, where potential multiplies, and where the right people find each other.</motion.p>
+                </ParallaxMotion>
               </div>
             </motion.div>
 
             <motion.div className="section-4" style={{ y: section4 }}>
-              <motion.img
-              className="section-4-bg"
-              src={SECTION4_IMG_SRC}
-              alt="About"
-              style={{ y: section4BG }}
-              />
+              <motion.div
+                className="section-4-bg-container"
+                style={{ y: section4BG }}
+              >
+                <ParallaxMotion speedX={20} speedY={15} easing={[0.22, 0.67, 0.3, 0.99]} delay={12}>
+                  <motion.img
+                    className="section-4-bg"
+                    src={SECTION4_IMG_SRC}
+                    alt="About"
+                    style={{ scale: 1.05 }}
+                  />
+                </ParallaxMotion>
+              </motion.div>
               {/* Add a tall test section to enable scrolling */}
               <motion.div className="section-4-content" style={{ y: section4Content }}>
-                <p>Founders House Helsinki is the hub for Finland’s most promising next-gen startups. A home for builders who move faster than anyone else, think differently, and raise the bar for everyone around them.</p>
+                <ParallaxMotion speedX={30} speedY={32} easing={[0.17, 0.67, 0.3, 0.99]}>
+                  <p>Founders House Helsinki is the hub for Finland’s most promising next-gen startups. A home for builders who move faster than anyone else, think differently, and raise the bar for everyone around them.</p>
+                </ParallaxMotion>
               </motion.div>
+            </motion.div>
+
+            <motion.div className="section-5">
+              {/*}
+              <HelsinkiViewerSimple environmentColor="#2B0906" scrollProgress={scrollProgress} />
+              */}
+              <div className="section-5-content">
+                <div className="content-img-container">
+                  <div className="img-container-fade">
+                    
+                  </div>
+                  <img src={SECTION5_MAP_IMG_SRC} alt="2D Map" />
+                </div>
+              </div>
             </motion.div>
           </motion.div>
         )}

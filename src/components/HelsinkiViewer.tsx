@@ -22,9 +22,19 @@ interface HelsinkiViewerProps {
   scrollProgress?: number
   onMapLoadingChange?: (state: MapLoadingState) => void
   showUI?: boolean
+  staticMode?: boolean; // disables drag/zoom/pan, enables only mouse-move camera
+  environmentColor?: string; // custom background/environment color
 }
 
-export const HelsinkiViewer = ({ shouldLoad = true, shouldPause = false, scrollProgress = 0, onMapLoadingChange, showUI = false }: HelsinkiViewerProps) => {
+export const HelsinkiViewer = ({
+  shouldLoad = true,
+  shouldPause = false,
+  scrollProgress = 0,
+  onMapLoadingChange,
+  showUI = false,
+  staticMode = false,
+  environmentColor,
+}: HelsinkiViewerProps) => {
   const containerRef = useRef<HTMLDivElement>(null)
   const sceneRef = useRef<HelsinkiScene | null>(null)
   const animationFrameRef = useRef<number>(0)
@@ -90,23 +100,25 @@ export const HelsinkiViewer = ({ shouldLoad = true, shouldPause = false, scrollP
     try {
       // Initialize Helsinki scene
       const scene = new HelsinkiScene({
-          container: containerRef.current,
-          helsinkiCenter: {
-            lat: 60.1699,
-            lng: 24.9384,
-          },
-          radius: 2, // 2km radius
-          isNightMode: isDemoNightMode, // Use day mode by default
-          onLoadProgress: (progress) => {
-            setStatus(`Loading Helsinki 3D model... ${progress.toFixed(1)}%`)
-            onMapLoadingChange?.({ isLoaded: false, progress })
-          },
-          onLoadComplete: () => {
-            setModelLoaded(true)
-            setStatus('Helsinki 3D - 2km radius')
-            onMapLoadingChange?.({ isLoaded: true, progress: 100 })
-          },
-        })
+        container: containerRef.current,
+        helsinkiCenter: {
+          lat: 60.1699,
+          lng: 24.9384,
+        },
+        radius: 2, // 2km radius
+        isNightMode: isDemoNightMode, // Use day mode by default
+        onLoadProgress: (progress) => {
+          setStatus(`Loading Helsinki 3D model... ${progress.toFixed(1)}%`)
+          onMapLoadingChange?.({ isLoaded: false, progress })
+        },
+        onLoadComplete: () => {
+          setModelLoaded(true)
+          setStatus('Helsinki 3D - 2km radius')
+          onMapLoadingChange?.({ isLoaded: true, progress: 100 })
+        },
+        staticMode,
+        environmentColor,
+      })
 
       sceneRef.current = scene
 

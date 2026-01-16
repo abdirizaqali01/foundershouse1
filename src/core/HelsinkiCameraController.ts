@@ -97,7 +97,7 @@ export class HelsinkiCameraController {
   // Add a new property for the drag target position
   private dragTargetPosition: THREE.Vector3 = new THREE.Vector3();
 
-  constructor(camera: THREE.PerspectiveCamera, domElement: HTMLElement) {
+  constructor(camera: THREE.PerspectiveCamera, domElement: HTMLElement, mouseMoveOnly: boolean = false) {
     const perfStart_cameraController = performance.now();
     this.camera = camera
     this.domElement = domElement
@@ -125,14 +125,16 @@ export class HelsinkiCameraController {
       this.orbit.enablePan = false // We handle panning manually
     }
 
-    // Listen for user interaction events
-    this.setupInteractionListeners()
+    // Only add interaction listeners if not mouseMoveOnly
+    if (!mouseMoveOnly) {
+      this.setupInteractionListeners()
+    }
     
     // Store base speeds
     this.baseZoomSpeed = this.zoomSpeed
     this.baseRotateSpeed = this.rotateSpeed
 
-    // Add mousemove listener for parallax effect (only once)
+    // Always add mousemove listener for parallax effect
     this.baseCameraPosition.copy(camera.position);
     this.domElement.addEventListener('mousemove', this._handleParallaxMouseMove);
     this.domElement.addEventListener('mouseleave', this._handleParallaxMouseLeave);

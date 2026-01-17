@@ -17,21 +17,34 @@ const SECTION4_IMG_SRC = "/Legends Day Still 014.webp";
 const SECTION5_MAP_IMG_SRC = "/2D_map.png";
 
 export default function AboutPage() {
-  // Scroll progress for HelsinkiViewerSimple
-  const [scrollProgress, setScrollProgress] = useState(0);
-
   const [stage, setStage] = useState(1);
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollY = window.scrollY;
-      const docHeight = document.body.scrollHeight - window.innerHeight;
-      const progress = docHeight > 0 ? Math.min(scrollY / docHeight, 1) : 0;
-      setScrollProgress(progress);
-    };
-    window.addEventListener("scroll", handleScroll);
-    handleScroll(); // Initial value
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  // Ref for section-5
+  const section5Ref = useRef<HTMLDivElement>(null);
+  const [imgScale, setImgScale] = useState(2);
+  const [imgSkew, setImgSkew] = useState(-50); // degrees, negative for backward tilt
+    // Use rAF for scale animation (Lenis compatible)
+    useEffect(() => {
+      let running = true;
+      function animate() {
+        if (!running) return;
+        if (section5Ref.current) {
+          const rect = section5Ref.current.getBoundingClientRect();
+          const windowHeight = window.innerHeight;
+          const total = rect.height + windowHeight;
+          const visible = windowHeight - rect.top;
+          let progress = visible / total;
+          progress = Math.max(0, Math.min(1, progress));
+          const scale = 2 - 0.5 * progress;
+          setImgScale(scale);
+          // Skew from -50deg (backward tilt) to 0deg
+          const skew = -50 + 50 * progress;
+          setImgSkew(skew);
+        }
+        requestAnimationFrame(animate);
+      }
+      animate();
+      return () => { running = false; };
+    }, []);
 
   // Parallax setup
   const yScroll = useMotionValue(0);
@@ -316,16 +329,22 @@ export default function AboutPage() {
               </motion.div>
             </motion.div>
 
-            <motion.div className="section-5">
-              {/*}
-              <HelsinkiViewerSimple environmentColor="#2B0906" scrollProgress={scrollProgress} />
-              */}
+            <motion.div className="section-5" ref={section5Ref}>
               <div className="section-5-content">
                 <div className="content-img-container">
                   <div className="img-container-fade">
-                    
+                      <div className="img-gradient-left" />
+                      <div className="img-gradient-right" />
+                      <div className="img-gradient-top" />
+                      <div className="img-gradient-bottom" />
                   </div>
-                  <img src={SECTION5_MAP_IMG_SRC} alt="2D Map" />
+                  <motion.img
+                    src={SECTION5_MAP_IMG_SRC}
+                    alt="2D Map"
+                    style={{ width: "100%", height: "auto", transform: `skewY(${imgSkew}deg)` }}
+                    animate={{ scale: imgScale }}
+                    transition={{ duration: 0.6, ease: [0.17, 0.67, 0.3, 0.99] }}
+                  />
                 </div>
               </div>
             </motion.div>

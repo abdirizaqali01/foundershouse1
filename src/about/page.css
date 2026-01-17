@@ -265,17 +265,72 @@
 
 
 .section-5 {
-    padding: 5% 5%;
+    position: relative;
+    padding: 8% 8%;
     background: #2B0906;
 }
 
 .section-5 .content-img-container {
     overflow: hidden;
+    position: relative;
+    height: 1000px;
 }
 
 .section-5 .content-img-container img {
+    position: absolute;
+    top: 0;
+    left: 0;
     width: 100%;
     height: auto;
     mix-blend-mode: multiply;
     filter: brightness(1) contrast(2);
+    z-index: 1;
+}
+
+.section-5 .img-container-fade {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    z-index: 2;
+}
+
+.section-5 .img-container-fade .img-gradient-left,
+.section-5 .img-container-fade .img-gradient-right,
+.section-5 .img-container-fade .img-gradient-top,
+.section-5 .img-container-fade .img-gradient-bottom {
+    position: absolute;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.section-5 .img-container-fade .img-gradient-left {
+    top: 0;
+    left: 0;
+    width: 260px;
+    height: 100%;
+    background: linear-gradient(to right, #2B0906 0%, rgba(43,9,6,0) 100%);
+}
+
+.section-5 .img-container-fade .img-gradient-right {
+    top: 0;
+    right: 0;
+    width: 260px;
+    height: 100%;
+    background: linear-gradient(to left, #2B0906 0%, rgba(43,9,6,0) 100%);
+}
+
+.section-5 .img-container-fade .img-gradient-top {
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 200px;
+    background: linear-gradient(to bottom, #2B0906 0%, rgba(43,9,6,0) 100%);
+}
+
+.section-5 .img-container-fade .img-gradient-bottom {
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: 260px;
+    background: linear-gradient(to top, #2B0906 0%, rgba(43,9,6,0) 100%);
 }

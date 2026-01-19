@@ -5,6 +5,7 @@ import GridDistortion from '../effects/GridDistortion.tsx';
 import ParallaxMotion from '../effects/ParallaxMotion.tsx';
 import "./page.css";
 import { HelsinkiViewer } from "../components/HelsinkiViewer.tsx";
+import Footer from "../components/Footer.tsx";
 // import HelsinkiViewerSimple from "../components/HelsinkiViewerSimple.tsx";
 
 const HEADER_IMG_SRC = "/images/The Legends Day.webp";
@@ -412,58 +413,126 @@ export default function AboutPage() {
             </motion.div>
 
             <div className="team-individuals-wrapper" ref={teamRef}>
-              <div className="individuals">
-                <div
-                  className="individual-name"
-                  onMouseEnter={() => setHoveredMember("camilla")}
-                >
-                  <h4>Camilla Komulainen</h4>
+              <ParallaxMotion speedX={25} speedY={25} delay={10} easing={[0.17, 0.67, 0.3, 0.99]}>
+                <div className="individuals">
+                  <div
+                    className={`individual-name${hoveredMember === "camilla" ? " active" : ""}`}
+                    onMouseEnter={() => setHoveredMember("camilla")}
+                  >
+                    <h4>Camilla Komulainen</h4>
+                  </div>
+                  <div
+                    className={`individual-name${hoveredMember === "kia" ? " active" : ""}`}
+                    onMouseEnter={() => setHoveredMember("kia")}
+                  >
+                    <h4>Kia Kanninen</h4>
+                  </div>
+                  <div
+                    className={`individual-name${hoveredMember === "niklas" ? " active" : ""}`}
+                    onMouseEnter={() => setHoveredMember("niklas")}
+                  >
+                    <h4>Niklas Kervinen</h4>
+                  </div>
+                  <div
+                    className={`individual-name${hoveredMember === "johannes" ? " active" : ""}`}
+                    onMouseEnter={() => setHoveredMember("johannes")}
+                  >
+                    <h4>Johannes Korpela</h4>
+                  </div>
+                  <div
+                    className={`individual-name${hoveredMember === "robin" ? " active" : ""}`}
+                    onMouseEnter={() => setHoveredMember("robin")}
+                  >
+                    <h4>Robin Hansson</h4>
+                  </div>
                 </div>
-                <div
-                  className="individual-name"
-                  onMouseEnter={() => setHoveredMember("kia")}
-                >
-                  <h4>Kia Kanninen</h4>
+              </ParallaxMotion>
+              <ParallaxMotion speedX={10} speedY={10} delay={10} easing={[0.17, 0.67, 0.3, 0.99]}>
+                <div className="individuals-profiles">
+                  <AnimatePresence mode="wait">
+                    {hoveredMember === "camilla" && (
+                      <motion.div
+                        key="camilla"
+                        className="profiles-card card-camilla"
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 5 }}
+                        transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+                      >
+                        <img src="images/camilla.png" alt="Camilla Komulainen" />
+                        <h5>started to like horses</h5>
+                        <a className="card-email" href="mailto:camilla@wave.ventures">camilla@wave.ventures</a>
+                        <a className="card-linkedin" href="https://www.linkedin.com/in/camillakomulainen/">linkedin</a>
+                      </motion.div>
+                    )}
+                    {hoveredMember === "kia" && (
+                      <motion.div
+                        key="kia"
+                        className="profiles-card card-kia"
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 5 }}
+                        transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+                      >
+                        <img src="images/kia.png" alt="Kia Kanninen" />
+                        <h5>Likes horses</h5>
+                        <a className="card-email" href="mailto:kia@wave.ventures">kia@wave.ventures</a>
+                        <a className="card-linkedin" href="https://www.linkedin.com/in/kiakanninen/">linkedin</a>
+                      </motion.div>
+                    )}
+                    {hoveredMember === "niklas" && (
+                      <motion.div
+                        key="niklas"
+                        className="profiles-card card-niklas"
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 5 }}
+                        transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+                      >
+                        <img src="images/niklas.png" alt="Niklas Kervinen" />
+                        <h5>Likes horses</h5>
+                        <a className="card-email" href="mailto:niklas@wave.ventures">niklas@wave.ventures</a>
+                        <a className="card-linkedin" href="https://www.linkedin.com/in/niklas-kervinen/">linkedin</a>
+                      </motion.div>
+                    )}
+                    {hoveredMember === "johannes" && (
+                      <motion.div
+                        key="johannes"
+                        className="profiles-card card-johannes"
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 5 }}
+                        transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+                      >
+                        <img src="images/johannes.png" alt="Johannes Korpela" />
+                        <h5>Likes horses</h5>
+                        <a className="card-email" href="mailto:johannes@wave.ventures">johannes@wave.ventures</a>
+                        <a className="card-linkedin" href="https://www.linkedin.com/in/korpelajohannes/">linkedin</a>
+                      </motion.div>
+                    )}
+                    {hoveredMember === "robin" && (
+                      <motion.div
+                        key="robin"
+                        className="profiles-card card-robin"
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 5 }}
+                        transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+                      >
+                        <img src="images/robin.png" alt="Robin Hansson" />
+                        <h5>Likes horses</h5>
+                        <a className="card-email" href="mailto:robin@wave.ventures">robin@wave.ventures</a>
+                        <a className="card-linkedin" href="https://www.linkedin.com/in/robin-hansson-/">linkedin</a>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
-              </div>
-              <div className="individuals-profiles">
-                <AnimatePresence mode="wait">
-                  {hoveredMember === "camilla" && (
-                    <motion.div
-                      key="camilla"
-                      className="profiles-card card-camilla"
-                      initial={{ opacity: 0, y: 5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 5 }}
-                      transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-                    >
-                      <img src="images/camilla.png" alt="Camilla Komulainen" />
-                      <h5>started to like horses</h5>
-                      <a className="card-email" href="">camilla@wave.ventures</a>
-                      <a className="card-linkedin" href="">linkedin.com/in/camillakomulainen</a>
-                    </motion.div>
-                  )}
-                  {hoveredMember === "kia" && (
-                    <motion.div
-                      key="kia"
-                      className="profiles-card card-kia"
-                      initial={{ opacity: 0, y: 5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 5 }}
-                      transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-                    >
-                      <img src="images/kia.png" alt="Kia Kanninen" />
-                      <h5>Likes horses</h5>
-                      <a className="card-email" href="">kia@wave.ventures</a>
-                      <a className="card-linkedin" href="">linkedin.com/in/kiakanninen</a>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+              </ParallaxMotion>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
+      <Footer />
     </div>
   );
 }

@@ -459,7 +459,7 @@ export default function AboutPage() {
                         exit={{ opacity: 0, y: 5 }}
                         transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
                       >
-                        <img src="images/camilla.png" alt="Camilla Komulainen" />
+                        <img src="images/camilla.webp" alt="Camilla Komulainen" />
                         <h5>started to like horses</h5>
                         <a className="card-email" href="mailto:camilla@wave.ventures">camilla@wave.ventures</a>
                         <a className="card-linkedin" href="https://www.linkedin.com/in/camillakomulainen/">linkedin</a>
@@ -474,7 +474,7 @@ export default function AboutPage() {
                         exit={{ opacity: 0, y: 5 }}
                         transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
                       >
-                        <img src="images/kia.png" alt="Kia Kanninen" />
+                        <img src="images/kia.webp" alt="Kia Kanninen" />
                         <h5>Likes horses</h5>
                         <a className="card-email" href="mailto:kia@wave.ventures">kia@wave.ventures</a>
                         <a className="card-linkedin" href="https://www.linkedin.com/in/kiakanninen/">linkedin</a>
@@ -489,7 +489,7 @@ export default function AboutPage() {
                         exit={{ opacity: 0, y: 5 }}
                         transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
                       >
-                        <img src="images/niklas.png" alt="Niklas Kervinen" />
+                        <img src="images/niklas.webp" alt="Niklas Kervinen" />
                         <h5>Likes horses</h5>
                         <a className="card-email" href="mailto:niklas@wave.ventures">niklas@wave.ventures</a>
                         <a className="card-linkedin" href="https://www.linkedin.com/in/niklas-kervinen/">linkedin</a>
@@ -504,7 +504,7 @@ export default function AboutPage() {
                         exit={{ opacity: 0, y: 5 }}
                         transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
                       >
-                        <img src="images/johannes.png" alt="Johannes Korpela" />
+                        <img src="images/johannes.webp" alt="Johannes Korpela" />
                         <h5>Likes horses</h5>
                         <a className="card-email" href="mailto:johannes@wave.ventures">johannes@wave.ventures</a>
                         <a className="card-linkedin" href="https://www.linkedin.com/in/korpelajohannes/">linkedin</a>
@@ -519,7 +519,7 @@ export default function AboutPage() {
                         exit={{ opacity: 0, y: 5 }}
                         transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
                       >
-                        <img src="images/robin.png" alt="Robin Hansson" />
+                        <img src="images/robin.webp" alt="Robin Hansson" />
                         <h5>Likes horses</h5>
                         <a className="card-email" href="mailto:robin@wave.ventures">robin@wave.ventures</a>
                         <a className="card-linkedin" href="https://www.linkedin.com/in/robin-hansson-/">linkedin</a>

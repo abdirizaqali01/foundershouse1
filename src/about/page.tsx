@@ -357,7 +357,7 @@ export default function AboutPage() {
                           className="section-5-map-img"
                           src={SECTION5_MAP_IMG_SRC}
                           alt="2D Map"
-                          style={{ mixBlendMode: "multiply", width: "100%", height: "auto", transform: `skewY(${imgSkew}deg)`, top: "10%" }}
+                          style={{ mixBlendMode: "multiply", width: "100%", height: "auto", transform: `skewY(${imgSkew}deg)` }}
                           animate={{ scale: imgScale }}
                           transition={{ duration: 0.6, ease: [0.17, 0.67, 0.3, 0.99] }}
                         />
@@ -368,7 +368,7 @@ export default function AboutPage() {
                       className="section-5-map-img"
                       src={SECTION5_MAP_TOP_IMG_SRC}
                       alt="2D Map Pin"
-                      style={{ width: "100%", height: "auto", transform: `skewY(${imgSkew}deg)`, top: "10%" }}
+                      style={{ width: "100%", height: "auto", transform: `skewY(${imgSkew}deg)`, top: "0%" }}
                       animate={{ scale: imgScale }}
                       transition={{ duration: 0.6, ease: [0.17, 0.67, 0.3, 0.99] }}
                     />

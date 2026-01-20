@@ -76,6 +76,9 @@ export default function JoinPage() {
   const section2BG = useTransform(scrollY, [0, 1500], [-300, 50]);
   const section2Content = useTransform(scrollY, [0, 1500], [-150, 200]);
 
+  // Scroll-based scale for header-wrapper in stage 2
+  const headerWrapperScale = useTransform(scrollY, [0, 400], [1, 0.92]);
+
   const section3Ref = useRef<HTMLDivElement>(null);
   const revealerControls = useAnimation();
 
@@ -224,9 +227,12 @@ export default function JoinPage() {
             className="stage2-wrapper"
           >
 
-            <div className="header-wrapper" style={{pointerEvents: "none"}}>
+            <motion.div
+              className="header-wrapper"
+              style={enableScrollScale ? { pointerEvents: "none", scale: headerWrapperScale } : { pointerEvents: "none" }}
+            >
               <motion.div className="header-content" style={{ y: headerContent }}>
-                <ParallaxMotion speedX={30} speedY={15} easing={[0.17, 0.67, 0.3, 0.99]} delay={10}>
+                <ParallaxMotion speedX={30} speedY={15} easing={[0.17, 0.67, 0.3, 0.99]} delay={6}>
                   <div className="header-h1-wrapper">
                     <motion.h1
                       className="header-h1"
@@ -251,12 +257,10 @@ export default function JoinPage() {
                   </ParallaxMotion>
                 </div>
               </motion.div>
-            </div>
+            </motion.div>
 
             <div className="section-2">
-              <motion.div className="section-2-bg-container" style={{ y: section2BG }}>
-                test
-              </motion.div>
+              test
             </div>
 
           </motion.div>

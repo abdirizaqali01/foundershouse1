@@ -14,9 +14,9 @@ const SECTION3_IMG_1_SRC = "/images/Legends Day Still 002.webp";
 const SECTION3_IMG_2_SRC = "/images/Wave x Maki Photo.webp";
 const SECTION3_IMG_3_SRC = "/images/LoadInImage-min.webp";
 const SECTION4_IMG_SRC = "/images/Legends Day Still 014.webp";
-const SECTION5_MAP_IMG_SRC = "/models/birdseyemaps_large.png";
-const SECTION5_MAP_TOP_IMG_SRC = "/models/birdseyemaps_pin.png";
-const FOUNDERS_HOUSE_TEAM_IMG_SRC = "/images/Founders House BW.jpg";  
+const SECTION5_MAP_IMG_SRC = "/models/birdseyemaps.webp";
+const SECTION5_MAP_TOP_IMG_SRC = "/models/radar.webp";
+const FOUNDERS_HOUSE_TEAM_IMG_SRC = "/images/Founders House BW.webp";  
 
 export default function AboutPage() {
   const [stage, setStage] = useState(1);
@@ -103,9 +103,9 @@ export default function AboutPage() {
       const windowHeight = window.innerHeight;
       // When the top of section-3 is above the bottom by half its height
       if (rect.top < windowHeight - rect.height / 8) {
-        revealerControls.start({ y: "100%" }); // Move up (adjust as needed)
+        revealerControls.start({ x: "-100%" }); // Move up (adjust as needed)
       } else {
-        revealerControls.start({ y: "0%" }); // Original position
+        revealerControls.start({ x: "0" }); // Original position
       }
     };
     window.addEventListener("scroll", handleScroll);

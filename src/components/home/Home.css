@@ -318,29 +318,27 @@
 /* ==================== 3. QUOTE CARDS SECTION - 3x2 GRID ==================== */
 
 .quote-cards-section {
-  position: fixed; /* Changed to fixed to sit behind opening section */
-  top: 0;
-  left: 0;
+  position: relative;
   width: 100%;
-  height: 100vh;
-  padding: clamp(2rem, 4vw, 4rem); /* Responsive padding */
+  min-height: 160vh;
+  padding: clamp(2rem, 4vw, 4rem);
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: transparent; /* Transparent to show container's animated background */
-  overflow: visible; /* Allow cards to be visible */
-  z-index: 1; /* Behind opening section */
+  background-color: transparent;
+  overflow: visible;
+  z-index: 1;
 }
 
 .quote-cards-grid {
   position: relative;
-  max-width: 900px; /* Fixed max width */
+  max-width: 1800px; /* Fixed max width */
   width: 100%;
   margin: 0 auto;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 1rem; /* Fixed gap */
-  padding: 0 2rem; /* Fixed padding */
+  gap: 20px; /* Fixed gap */
+  padding: 0 1rem; /* Fixed padding */
   align-items: start;
   transform: scale(0.95);
   transform-origin: center center;
@@ -356,7 +354,7 @@
 
 /* Top-left: ILKKA (light-red) - mid height */
 .quote-card-wrapper:nth-child(1) {
-  margin-top: 30px;
+  margin-top: 30px;   
   z-index: 1;
 }
 

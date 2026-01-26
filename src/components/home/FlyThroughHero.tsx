@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState, useEffect } from 'react';
-import { motion, useScroll, useTransform, MotionValue } from 'framer-motion';
+import { motion, useScroll, useTransform, useSpring, MotionValue, useInView } from 'framer-motion';
 import ParallaxMotion from '../../effects/ParallaxMotion.tsx';
 import './FlyThroughHero.css';
 import { QuoteCard } from './sections/quotes/QuoteCard.tsx';
@@ -246,40 +246,90 @@ function HeroText({ scrollYProgress }: { scrollYProgress: MotionValue<number> })
 
 export function FlyThroughHero() { 
   // ------------------------------------------------------------------------
-  // LOCALIZED PARALLAX Y MOVEMENT FOR OBSESSIVE IMAGE
+  // SCROLL SECTION ANIMATION REFS & HOOKS (must be top-level for hooks)
   // ------------------------------------------------------------------------
-  const obsessiveSectionRef = useRef<HTMLDivElement>(null);
-  const { scrollYProgress: obsessiveScroll } = useScroll({
+  const scrollSectionRef = useRef<HTMLDivElement>(null);
+  const inView = useInView(scrollSectionRef, { amount: 0.05 });
+    //---------- LOCALIZED PARALLAX Y MOVEMENT FOR OBSESSIVE IMAGE ----------//
+    const obsessiveSectionRef = useRef<HTMLDivElement>(null);
+    const { scrollYProgress: obsessiveScroll } = useScroll({
     target: obsessiveSectionRef,
     offset: ['start end', 'end start'],
-  });
-  const obsessedImg = useTransform(obsessiveScroll, [0, 1], [-150, 100]);
-  const obsessedImgContent = useTransform(obsessiveScroll, [0, 1], [-100, 50]);
+    });
+    const obsessedImg = useTransform(obsessiveScroll, [0, 1], [-150, 100]);
+    const obsessedImgContent = useTransform(obsessiveScroll, [0, 1], [-100, 50]);
+    const obsessedText = useTransform(obsessiveScroll, [0, 1], [250, -250]);
+    
+    //---------- LOCALIZED PARALLAX Y MOVEMENT FOR AMBITIOUS IMAGE ----------//
+    const ambitiousSectionRef = useRef<HTMLDivElement>(null);
+    const { scrollYProgress: ambitiousScroll } = useScroll({
+      target: ambitiousSectionRef,
+      offset: ['start end', 'end start'],
+    });
+    const ambitiousImg = useTransform(ambitiousScroll, [0, 1], [-150, 100]);
+    const ambitiousImgContent = useTransform(ambitiousScroll, [0, 1], [-100, 50]);
+    const ambitiousText = useTransform(ambitiousScroll, [0, 1], [250, -250]);
+    const ambitiousMap = useTransform(ambitiousScroll, [0, 1], [-200, 400]);
+    // Scroll-based rotation for content-img-container
+    const ambitiousRotateXRaw = useTransform(ambitiousScroll, [0, 0.7, 1], [0, 60, 60]);
+    const ambitiousRotateYRaw = useTransform(ambitiousScroll, [0, 0.9, 1], [0, -10, -10]);
+    const ambitiousRotateZRaw = useTransform(ambitiousScroll, [0, 0.5, 1], [0, 0, 50]);
+    const ambitiousRotateX = useSpring(ambitiousRotateXRaw, { stiffness: 90, damping: 20 });
+    const ambitiousRotateY = useSpring(ambitiousRotateYRaw, { stiffness: 35, damping: 20 });
+    const ambitiousRotateZ = useSpring(ambitiousRotateZRaw, { stiffness: 35, damping: 20 });
 
-  const containerRef = useRef<HTMLDivElement>(null);
+    //---------- LOCALIZED PARALLAX Y MOVEMENT FOR NEXTGEN IMAGE ----------//
+    const nextgenSectionRef = useRef<HTMLDivElement>(null);
+    const { scrollYProgress: nextgenScroll } = useScroll({
+    target: nextgenSectionRef,
+    offset: ['start end', 'end start'],
+    });
+    const nextgenImg = useTransform(nextgenScroll, [0, 1], [-150, 100]);
+    const nextgenImgContent = useTransform(nextgenScroll, [0, 1], [-100, 50]);
+    const nextgenText = useTransform(nextgenScroll, [0, 1], [250, -250]);
 
-  // Set up scroll tracking for fade-out
-  const { scrollYProgress } = useScroll({
+    //---------- LOCALIZED PARALLAX Y MOVEMENT FOR BUILDERS IMAGE ----------//
+    const buildersSectionRef = useRef<HTMLDivElement>(null);
+    const { scrollYProgress: buildersScroll } = useScroll({
+    target: buildersSectionRef,
+    offset: ['start end', 'end start'],
+    });
+    const buildersImg = useTransform(buildersScroll, [0, 1], [-150, 100]);
+    const buildersImgContent = useTransform(buildersScroll, [0, 1], [-100, 50]);
+    const buildersText = useTransform(buildersScroll, [0, 1], [250, -250]);
+
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    // Set up scroll tracking for fade-out
+    const { scrollYProgress } = useScroll({
     target: containerRef,
     offset: ['start start', 'end start'],
-  });
+    });
 
-  // Fade out hero when scrollYProgress >= 1 (more gradual)
-  const fadeOut = useTransform(scrollYProgress, [0.7, 1], [1, 0]);
-  // zIndex stays 10 until fully faded, then 0
-  const heroZ = useTransform(scrollYProgress, [0, 0.999, 1], [10, 10, 0]);
+    // Fade out hero when scrollYProgress >= 1 (more gradual)
+    const fadeOut = useTransform(scrollYProgress, [0.7, 1], [1, 0]);
+    // zIndex stays 10 until fully faded, then 0
+    const heroZ = useTransform(scrollYProgress, [0, 0.999, 1], [10, 10, 0]);
 
-  // Quotes section scroll effect
-  // The parent .quotes-section is 100vh tall, so use window scroll
-  const quotesSectionRef = useRef<HTMLDivElement>(null);
-  const { scrollYProgress: quotesScroll } = useScroll({
-    target: quotesSectionRef,
-    offset: ['start end', 'end start'],
-  });
-  // Middle slowest, left faster, right fastest (more exaggerated parallax)
-  const leftY = useTransform(quotesScroll, [0, 1], [100, -600]);
-  const centerY = useTransform(quotesScroll, [0, 1], [0, -250]);
-  const rightY = useTransform(quotesScroll, [0, 1], [1000, -1000]);
+    // Quotes section scroll effect
+    // The parent .quotes-section is 100vh tall, so use window scroll
+    const quotesSectionRef = useRef<HTMLDivElement>(null);
+    const { scrollYProgress: quotesScroll } = useScroll({
+      target: quotesSectionRef,
+      offset: ['start end', 'end start'],
+    });
+    // Middle slowest, left faster, right fastest (more exaggerated parallax)
+    const leftY = useTransform(quotesScroll, [0, 1], [100, -600]);
+    const centerY = useTransform(quotesScroll, [0, 1], [0, -250]);
+    const rightY = useTransform(quotesScroll, [0, 1], [1000, -1000]);
+    // Scale and 3D tilt for quotes section as it scrolls out of view
+    const quotesScaleRaw = useTransform(quotesScroll, [0.72, 1], [1, 0.8]);
+    const quotesTiltRaw = useTransform(quotesScroll, [0.72, 1], [0, 25]);
+    const springConfig = { stiffness: 100, damping: 20, mass: 0.1 };
+    const quotesScale = useSpring(quotesScaleRaw, springConfig);
+    const quotesTilt = useSpring(quotesTiltRaw, springConfig);
+
+
 
 // Hero is always mounted, just fades in/out
 return (
@@ -373,70 +423,319 @@ return (
         {/* ------------------------------------------------------------------------ */}
         {/* QUOTES SECTION */}
         {/* ------------------------------------------------------------------------ */}
-        <div
-            className="quotes-section"
-            ref={quotesSectionRef}
-            style={{ position: 'relative', zIndex: 5, backgroundColor: '#590D0F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        <motion.div
+          className="quotes-section"
+          ref={quotesSectionRef}
+          style={{
+            position: 'relative',
+            zIndex: 5,
+            backgroundColor: '#590D0F',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            perspective: 1200,
+          }}
         >
+          <motion.div
+            style={{
+              scale: quotesScale,
+              rotateX: quotesTilt,
+              transformOrigin: 'center bottom',
+              width: '100%',
+            }}
+          >
             <div className="content-wrapper">
-                <div className="quotes-grid">
-                    <motion.div className="column column-left" style={{ y: leftY }}>
-                        {quoteCardsData.filter((_, i) => i % 3 === 0).map((card, idx) => (
-                            <QuoteCard key={card.name + idx} {...card} />
-                        ))}
-                    </motion.div>
-                    <motion.div className="column column-center" style={{ y: centerY }}>
-                        {quoteCardsData.filter((_, i) => i % 3 === 1).map((card, idx) => (
-                            <QuoteCard key={card.name + idx} {...card} />
-                        ))}
-                    </motion.div>
-                    <motion.div className="column column-right" style={{ y: rightY }}>
-                        {quoteCardsData.filter((_, i) => i % 3 === 2).map((card, idx) => (
-                            <QuoteCard key={card.name + idx} {...card} />
-                        ))}
-                    </motion.div>
-                </div>
+              <div className="quotes-grid">
+                <motion.div className="column column-left" style={{ y: leftY }}>
+                  {quoteCardsData.filter((_, i) => i % 3 === 0).map((card, idx) => (
+                    <QuoteCard key={card.name + idx} {...card} />
+                  ))}
+                </motion.div>
+                <motion.div className="column column-center" style={{ y: centerY }}>
+                  {quoteCardsData.filter((_, i) => i % 3 === 1).map((card, idx) => (
+                    <QuoteCard key={card.name + idx} {...card} />
+                  ))}
+                </motion.div>
+                <motion.div className="column column-right" style={{ y: rightY }}>
+                  {quoteCardsData.filter((_, i) => i % 3 === 2).map((card, idx) => (
+                    <QuoteCard key={card.name + idx} {...card} />
+                  ))}
+                </motion.div>
+              </div>
             </div>
-        </div>
+          </motion.div>
+        </motion.div>
 
         {/* ------------------------------------------------------------------------ */}
         {/* SCROLL SECTION */}
         {/* ------------------------------------------------------------------------ */}
-        <div className="scroll-section">
-          <div className="section-content-wrapper">
-            {/*-----------------------------------------*/}
-            <div className="part part-obsessive" ref={obsessiveSectionRef}>
-              <div className="bg-shape"></div>
-              <div className="part-img-wrapper">
-                <motion.div className="part-img-squares" style={{ y: obsessedImgContent }}>
-                    <ParallaxMotion speedX={24} speedY={24} delay={0} easing={[0.17, 0.67, 0.3, 0.99]}>
-                        <div className="square-1"></div>
+        {/* Add scroll-based entry animation to scroll-section */}
+        {(() => {
+          const { scrollYProgress: scrollSectionScroll } = useScroll({
+            target: scrollSectionRef,
+            offset: ['start end', 'end start'],
+          });
+          const scrollSectionScaleRaw = useTransform(scrollSectionScroll, [0, 0.15], [0.8, 1]);
+          const scrollSectionTiltRaw = useTransform(scrollSectionScroll, [0, 0.15], [-40, 0]);
+          const scrollSectionSkewRaw = useTransform(scrollSectionScroll, [0, 0.15], [10, 0]);
+          const scrollSectionScale = useSpring(scrollSectionScaleRaw, springConfig);
+          const scrollSectionTilt = useSpring(scrollSectionTiltRaw, springConfig);
+          const scrollSectionSkew = useSpring(scrollSectionSkewRaw, springConfig);
+          return (
+            <motion.div className="scroll-section">
+              <motion.div
+                className="section-content-wrapper"
+                ref={scrollSectionRef}
+                style={{
+                  scale: scrollSectionScale,
+                  rotateX: scrollSectionTilt,
+                  skewY: scrollSectionSkew,
+                  transformOrigin: 'center bottom',
+                  perspective: 1200,
+                  zIndex: 2,
+                }}>
+
+                {/*------------------- OBSESSIVE ------------------*/}
+                <div className="part part-obsessive" ref={obsessiveSectionRef}>
+                  <motion.div 
+                    className="bg-shape" 
+                    style={{ y: obsessedImg }}
+                    initial={{ scale: 1.2 }}
+                    animate={{ scale: inView ? 1 : 1.2 }}
+                    transition={{ type: 'spring', stiffness: 150, damping: 24 }}
+                  />
+                  <div className="part-img-wrapper">
+                    <motion.div className="part-img-squares" style={{ y: obsessedImgContent }}>
+                        <ParallaxMotion speedX={24} speedY={24} delay={0} easing={[0.17, 0.67, 0.3, 0.99]}>
+                            <div className="square-1"></div>
+                        </ParallaxMotion>
+                        <ParallaxMotion speedX={35} speedY={35} delay={0} easing={[0.17, 0.67, 0.3, 0.99]}>
+                            <div className="square-2"></div>
+                        </ParallaxMotion>
+                    </motion.div>
+                    <div className="part-img-text">
+                        <ParallaxMotion speedX={10} speedY={10} delay={0} easing={[0.17, 0.67, 0.3, 0.99]}>
+                            <motion.p 
+                            style={{ y: obsessedImgContent }}
+                            >
+                                For those who outwork and outthink the rest.
+                            </motion.p>
+                        </ParallaxMotion>
+                    </div>
+                    <div className='part-img'>
+                      <ParallaxMotion speedX={8} speedY={8} delay={12} easing={[0.17, 0.67, 0.3, 0.99]}>
+                        <motion.img
+                          src="/images/placeholder.webp" 
+                          alt="Founders House Obsessive Part" 
+                          style={{ y: obsessedImg, scale: 1.1 }}
+                        />
+                      </ParallaxMotion>
+                    </div>
+                  </div>
+                  <motion.div className="part-img-title" style={{ y: obsessedText }}>
+                    <ParallaxMotion speedX={24} speedY={24} delay={12} easing={[0.17, 0.67, 0.3, 0.99]}>
+                        <h3>OBSESSIVE</h3>
                     </ParallaxMotion>
-                    <ParallaxMotion speedX={35} speedY={35} delay={0} easing={[0.17, 0.67, 0.3, 0.99]}>
-                        <div className="square-2"></div>
-                    </ParallaxMotion>
-                </motion.div>
-                <div className="part-img-text">
-                    <ParallaxMotion speedX={10} speedY={10} delay={0} easing={[0.17, 0.67, 0.3, 0.99]}>
-                        <motion.p style={{ y: obsessedImgContent }}>For those who outwork and outthink the rest.</motion.p>
-                    </ParallaxMotion>
+                  </motion.div>
                 </div>
-                <div className='part-img'>
+
+
+                {/*------------------- AMBITIOUS ------------------*/}
+                <div className="part part-ambitious" ref={ambitiousSectionRef}>
+                  <motion.div 
+                    className="bg-shape" 
+                    style={{  }}
+                    initial={{ scale: 1.2 }}
+                    animate={{ scale: inView ? 1 : 1.2 }}
+                    transition={{ type: 'spring', stiffness: 150, damping: 44 }}
+                  />
+
+                  <div className="part-img-wrapper">
+                    <motion.div className="part-img-squares" style={{ y: ambitiousImgContent }}>
+                        <ParallaxMotion speedX={24} speedY={24} delay={0} easing={[0.17, 0.67, 0.3, 0.99]}>
+                            <div className="square-1"></div>
+                        </ParallaxMotion>
+                        <ParallaxMotion speedX={35} speedY={35} delay={0} easing={[0.17, 0.67, 0.3, 0.99]}>
+                            <div className="square-2"></div>
+                        </ParallaxMotion>
+                    </motion.div>
+                    <div className="part-img-text">
+                        <ParallaxMotion speedX={10} speedY={10} delay={0} easing={[0.17, 0.67, 0.3, 0.99]}>
+                            <motion.p 
+                            style={{ y: ambitiousImgContent }}
+                            >
+                                A space built for the rare few who operate at the 0.1% level.
+                            </motion.p>
+                        </ParallaxMotion>
+                    </div>
+                    <div className='part-img'>
+                      <ParallaxMotion speedX={8} speedY={8} delay={12} easing={[0.17, 0.67, 0.3, 0.99]}>
+                        <motion.img
+                          src="/images/place2.webp" 
+                          alt="Founders House Ambitious Part" 
+                          style={{ y: ambitiousImg, scale: 1.1 }}
+                        />
+                      </ParallaxMotion>
+                    </div>
+                  </div>
+
+                  <motion.div className="part-img-title" style={{ y: ambitiousText }}>
+                    <ParallaxMotion speedX={24} speedY={24} delay={12} easing={[0.17, 0.67, 0.3, 0.99]}>
+                        <h3>AMBITIOUS</h3>
+                    </ParallaxMotion>
+                  </motion.div>
+                  
+                  <div className="ambitious-map">
+                    <motion.div className="content-img-container"
+                      style={{ y: ambitiousMap, rotateX: ambitiousRotateX, rotateY: ambitiousRotateY, rotateZ: ambitiousRotateZ }}
+                    >
+                      <div className="img-container-fade">
+                          <div className="img-gradient-left" />
+                          <div className="img-gradient-right" />
+                          <div className="img-gradient-top" />
+                          <div className="img-gradient-bottom" />
+                      </div>
+                      {/*<motion.div className="ambitious-map-inner" style={{ rotateX: ambitiousRotateX }}>*/}
+                        <div style={{ mixBlendMode: "multiply" }}>
+                          <ParallaxMotion background="#2B0906" speedX={16} speedY={16} easing={[0.17, 0.67, 0.3, 0.99]}>
+                            <motion.img
+                              className="section-5-map-img"
+                              src="public/models/birdseyemaps.webp"
+                              alt="2D Map"
+                              style={{ mixBlendMode: "multiply", width: "100%", height: "auto" }}
+                              animate={{  }}
+                              transition={{ duration: 0.6, ease: [0.17, 0.67, 0.3, 0.99] }}
+                            />
+                          </ParallaxMotion>
+                        </div>
+                        <ParallaxMotion speedX={16} speedY={16} easing={[0.17, 0.67, 0.3, 0.99]}>
+                          <motion.img
+                            className="section-5-map-img"
+                            src="public/models/radar.webp"
+                            alt="2D Map Pin"
+                            style={{ width: "100%", height: "auto", top: "0%" }}
+                            animate={{  }}
+                            transition={{ duration: 0.6, ease: [0.17, 0.67, 0.3, 0.99] }}
+                          />
+                        </ParallaxMotion>
+                      {/*</motion.div>*/}
+                    </motion.div>
+                  </div>
+                </div>
+
+
+                {/*------------------- NEXTGEN ------------------*/}
+                <div className="part part-nextgen" ref={nextgenSectionRef}>
+                  <motion.div 
+                    className="bg-shape"
+                    style={{  }}
+                    initial={{ scale: 1.2 }}
+                    animate={{ scale: inView ? 1 : 1.2 }}
+                    transition={{ type: 'spring', stiffness: 150, damping: 44 }}
+                  />
+
+                  <div className="part-img-wrapper">
+                    <motion.div className="part-img-squares" style={{ y: nextgenImgContent }}>
+                        <ParallaxMotion speedX={24} speedY={24} delay={0} easing={[0.17, 0.67, 0.3, 0.99]}>
+                            <div className="square-1"></div>
+                        </ParallaxMotion>
+                        <ParallaxMotion speedX={35} speedY={35} delay={0} easing={[0.17, 0.67, 0.3, 0.99]}>
+                            <div className="square-2"></div>
+                        </ParallaxMotion>
+                    </motion.div>
+                    <div className="part-img-text">
+                        <ParallaxMotion speedX={10} speedY={10} delay={0} easing={[0.17, 0.67, 0.3, 0.99]}>
+                            <motion.p 
+                            style={{ y: nextgenImgContent }}
+                            >
+                                For the ones moving faster than everyone else.
+                            </motion.p>
+                        </ParallaxMotion>
+                    </div>
+                    <div className='part-img'>
+                      <ParallaxMotion speedX={8} speedY={8} delay={12} easing={[0.17, 0.67, 0.3, 0.99]}>
+                        <motion.img
+                          src="/images/place2.webp" 
+                          alt="Founders House NextGen Part" 
+                          style={{ y: nextgenImg, scale: 1.1 }}
+                        />
+                      </ParallaxMotion>
+                    </div>
+                  </div>
+
+                  <motion.div className="part-img-title" style={{ y: nextgenText }}>
+                    <ParallaxMotion speedX={24} speedY={24} delay={12} easing={[0.17, 0.67, 0.3, 0.99]}>
+                        <h3>NEXTGEN</h3>
+                    </ParallaxMotion>
+                  </motion.div>
+                </div>
+
+
+                {/*------------------- BUILDERS ------------------*/}
+                <div className="part part-builders" ref={buildersSectionRef}>
+                  <motion.div 
+                    className="bg-shape" 
+                    style={{ y: buildersImg }}
+                    initial={{ scale: 1.2 }}
+                    animate={{ scale: inView ? 1 : 1.2 }}
+                    transition={{ type: 'spring', stiffness: 150, damping: 44 }}
+                  />
+                  <div className="part-img-wrapper">
+                    <motion.div className="part-img-squares" style={{ y: buildersImgContent }}>
+                        <ParallaxMotion speedX={24} speedY={24} delay={0} easing={[0.17, 0.67, 0.3, 0.99]}>
+                            <div className="square-1"></div>
+                        </ParallaxMotion>
+                        <ParallaxMotion speedX={35} speedY={35} delay={0} easing={[0.17, 0.67, 0.3, 0.99]}>
+                            <div className="square-2"></div>
+                        </ParallaxMotion>
+                    </motion.div>
+                    <div className="part-img-text">
+                        <ParallaxMotion speedX={10} speedY={10} delay={0} easing={[0.17, 0.67, 0.3, 0.99]}>
+                            <motion.p 
+                            style={{ y: buildersImgContent }}
+                            >
+                                For those who outpace their own ambition.
+                            </motion.p>
+                        </ParallaxMotion>
+                    </div>
+                    <div className='part-img'>
+                      <ParallaxMotion speedX={8} speedY={8} delay={12} easing={[0.17, 0.67, 0.3, 0.99]}>
+                        <motion.img
+                          src="/images/place4.webp" 
+                          alt="Founders House Builders Part" 
+                          style={{ y: buildersImg, scale: 1.1 }}
+                        />
+                      </ParallaxMotion>
+                    </div>
+                  </div>
+                  <motion.div className="part-img-title" style={{ y: buildersText }}>
+                    <ParallaxMotion speedX={24} speedY={24} delay={12} easing={[0.17, 0.67, 0.3, 0.99]}>
+                        <h3>BUILDERS</h3>
+                    </ParallaxMotion>
+                  </motion.div>
+                </div>
+              </motion.div>
+
+              <motion.div
+                className="join-section"
+              >
+                <div className="join-title">
+                  <p>Only a handful move fast enough to be here, and they build alongside the people who will define what comes next.</p>
+                </div>
+                <div className="join-img">
                   <ParallaxMotion speedX={8} speedY={8} delay={12} easing={[0.17, 0.67, 0.3, 0.99]}>
-                    <motion.img 
-                      src="/images/placeholder.webp" 
-                      alt="Founders House Obsessive Part" 
-                      style={{ y: obsessedImg, scale: 1.1 }}
+                    <motion.img
+                      className="join-img-img"
+                      src="/images/horses.webp" 
+                      alt="Founders House Join Us" 
                     />
                   </ParallaxMotion>
+                  <h4>JOIN US, BUILD WITH US, DEFINE TOMORROW.</h4>
                 </div>
-              </div>
-              <div className="part-img-title">
-                <h3>OBSESSIVE</h3>
-              </div>
-            </div>
-          </div>
-        </div>
+              </motion.div>
+            </motion.div>
+          );
+        })()}
 
     </>
   );

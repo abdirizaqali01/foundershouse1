@@ -88,7 +88,7 @@ function AppContent() {
   return (
     <div className="App">
       <NoiseLayer />
-      <Suspense fallback={<div style={{ background: '#000', width: '100vw', height: '100vh' }} />}>
+      <Suspense fallback={<div style={{ background: '#590D0F', width: '100vw', height: '100vh' }} />}>
         <Routes location={location}>
           <Route path="/" element={<LoadingScreen
                 onComplete={() => {

@@ -53,7 +53,8 @@ function AppContent() {
       orientation: 'vertical',
       smoothWheel: true,
       wheelMultiplier: 1,
-      touchMultiplier: 2,
+      touchMultiplier: 0.5,
+      syncTouch: true,
     })
 
     function raf(time: number) {

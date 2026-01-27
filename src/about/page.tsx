@@ -18,11 +18,28 @@ const SECTION5_MAP_IMG_SRC = "/models/birdseyemaps.webp";
 const SECTION5_MAP_TOP_IMG_SRC = "/models/radar.webp";
 const FOUNDERS_HOUSE_TEAM_IMG_SRC = "/images/Founders House BW.webp";  
 
+// Profile images for preloading
+const PROFILE_IMAGES = [
+  "/images/camilla.webp",
+  "/images/kia.webp",
+  "/images/niklas.webp",
+  "/images/johannes.webp",
+  "/images/robin.webp"
+];
+
 export default function AboutPage() {
   const [stage, setStage] = useState(1);
   // For team hover effect
   const [hoveredMember, setHoveredMember] = useState<string | null>(null);
   const teamRef = useRef<HTMLDivElement>(null);
+
+  // Preload profile images
+  useEffect(() => {
+    PROFILE_IMAGES.forEach((src) => {
+      const img = new Image();
+      img.src = src;
+    });
+  }, []);
 
   useEffect(() => {
     if (!hoveredMember) return;

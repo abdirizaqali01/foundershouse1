@@ -4,8 +4,10 @@ import { useRef, useState, useEffect } from 'react';
 import { motion, useScroll, useTransform, useSpring, MotionValue, useInView } from 'framer-motion';
 import ParallaxMotion from '../../effects/ParallaxMotion.tsx';
 import './FlyThroughHero.css';
+import './FlyThroughHeroMobile.css';
 import { QuoteCard } from './sections/quotes/QuoteCard.tsx';
 import { quoteCardsData } from './sections/quotes/quoteCardsData';
+import Button from '../Button';
 
 // =============================================================================
 // CONFIGURATION
@@ -75,9 +77,10 @@ interface FloatingElementProps {
   scrollYProgress: MotionValue<number>;
   speedX?: number;
   speedY?: number;
+  positionSpread?: number;
 }
 
-function FloatingElement({ type, src, x, y, z, w, h, scrollYProgress, faint = false, speedX, speedY }: FloatingElementProps & { faint?: boolean }) {
+function FloatingElement({ type, src, x, y, z, w, h, scrollYProgress, faint = false, speedX, speedY, positionSpread = 1, id }: FloatingElementProps & { faint?: boolean }) {
   // Speed: lower z = closer = faster flyby
   const speed = 1 + (1 - z) * 2;
 
@@ -128,12 +131,18 @@ function FloatingElement({ type, src, x, y, z, w, h, scrollYProgress, faint = fa
     [0, 0, 4, 10]
   );
 
+  const spread = positionSpread ?? 1;
+  
+  // Mobile-specific adjustment for img-1
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  const adjustedX = (id === 'img-1' && isMobile) ? x - 10 : x;
+  
   return (
     <motion.div
       style={{
         position: 'absolute',
-        left: `calc(50% + ${x}%)`,
-        top: `calc(50% + ${y}%)`,
+        left: `calc(50% + ${adjustedX * spread}%)`,
+        top: `calc(50% + ${y * spread}%)`,
         x: xDrift,
         y: yDrift,
         scale,
@@ -213,29 +222,27 @@ function HeroText({ scrollYProgress }: { scrollYProgress: MotionValue<number> })
         willChange: 'transform, opacity, filter',
       }}
     >
-    
-            <h1
-                style={{
-                color: '#FFF8F2',
-                textAlign: 'left',
-                fontWeight: 700,
-                lineHeight: 1.1,
-                maxWidth: '1800px',
-                padding: '0 2rem',
-                fontSize: 'clamp(1.5rem, 4.5vw, 3.5rem)',
-                letterSpacing: '-0.02em',
-                textTransform: 'uppercase',
-                }}
-            >
-                {CONFIG.heroText.map((line, i) => (
-                <ParallaxMotion speedX={5} speedY={5} delay={0} easing={[0.17, 0.67, 0.3, 0.99]}>
-                <span key={i} style={{ display: 'block' }}>
-                    {line}
-                </span>
-                </ParallaxMotion>
-                ))}
-            </h1>
-        
+      <h1
+          style={{
+          color: '#FFF8F2',
+          textAlign: 'left',
+          fontWeight: 700,
+          lineHeight: 1.1,
+          maxWidth: '1800px',
+          padding: '0 2rem',
+          fontSize: 'clamp(1.8rem, 10vw, 3.5rem)',
+          letterSpacing: '-0.02em',
+          textTransform: 'uppercase',
+          }}
+      >
+          {CONFIG.heroText.map((line, i) => (
+          <ParallaxMotion speedX={5} speedY={5} delay={0} easing={[0.17, 0.67, 0.3, 0.99]}>
+          <span key={i} style={{ display: 'block' }}>
+              {line}
+          </span>
+          </ParallaxMotion>
+          ))}
+      </h1>
     </motion.div>
   );
 }
@@ -245,6 +252,39 @@ function HeroText({ scrollYProgress }: { scrollYProgress: MotionValue<number> })
 // =============================================================================
 
 export function FlyThroughHero() { 
+  // ------------------------------------------------------------------------
+  // RESPONSIVE SCALING FOR FLOATING ELEMENTS
+  // ------------------------------------------------------------------------
+  const [elementScale, setElementScale] = useState(1);
+  const [positionSpread, setPositionSpread] = useState(1);
+  const [isMobileView, setIsMobileView] = useState(false);
+  
+  useEffect(() => {
+    const handleResize = () => {
+      const width = window.innerWidth;
+      if (width < 768) {
+        // Mobile - smaller size, more spread
+        setElementScale(0.7);
+        setPositionSpread(1.2);
+        setIsMobileView(true);
+      } else if (width < 1024) {
+        // Tablet - disable parallax
+        setElementScale(0.7);
+        setPositionSpread(1.1);
+        setIsMobileView(true);
+      } else {
+        // Desktop
+        setElementScale(1);
+        setPositionSpread(1);
+        setIsMobileView(false);
+      }
+    };
+    
+    handleResize(); // Set initial scale
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  
   // ------------------------------------------------------------------------
   // SCROLL SECTION ANIMATION REFS & HOOKS (must be top-level for hooks)
   // ------------------------------------------------------------------------
@@ -319,9 +359,10 @@ export function FlyThroughHero() {
       offset: ['start end', 'end start'],
     });
     // Middle slowest, left faster, right fastest (more exaggerated parallax)
-    const leftY = useTransform(quotesScroll, [0, 1], [100, -600]);
-    const centerY = useTransform(quotesScroll, [0, 1], [0, -250]);
-    const rightY = useTransform(quotesScroll, [0, 1], [1000, -1000]);
+    // Remove parallax for all columns on mobile
+    const leftY = useTransform(quotesScroll, [0, 1], isMobileView ? [0, 0] : [100, -600]);
+    const centerY = useTransform(quotesScroll, [0, 1], isMobileView ? [0, 0] : [0, -250]);
+    const rightY = useTransform(quotesScroll, [0, 1], isMobileView ? [0, 0] : [1000, -1000]);
     // Scale and 3D tilt for quotes section as it scrolls out of view
     const quotesScaleRaw = useTransform(quotesScroll, [0.72, 1], [1, 0.8]);
     const quotesTiltRaw = useTransform(quotesScroll, [0.72, 1], [0, 25]);
@@ -329,21 +370,9 @@ export function FlyThroughHero() {
     const quotesScale = useSpring(quotesScaleRaw, springConfig);
     const quotesTilt = useSpring(quotesTiltRaw, springConfig);
 
-
-
-// Hero is always mounted, just fades in/out
+    
 return (
     <>
-        {/* Scroll container for animation progress only */}
-        <div
-            ref={containerRef}
-            style={{
-            position: 'relative',
-            backgroundColor: '#590D0F',
-            height: `${CONFIG.scrollDistance * 100}vh`,
-            }}
-        />
-
         {/* Fixed hero viewport, fades out at end, fades back in if user scrolls up */}
         <motion.div
             style={{
@@ -356,7 +385,7 @@ return (
             backgroundColor: CONFIG.bgColor,
             zIndex: heroZ,
             opacity: fadeOut,
-            pointerEvents: 'auto',
+            pointerEvents: 'none',
             }}
         >
             {/* 3D perspective container */}
@@ -378,12 +407,13 @@ return (
                 x={el.x}
                 y={el.y}
                 z={el.z}
-                w={el.w}
-                h={el.h}
+                w={el.w * elementScale}
+                h={el.h * elementScale}
                 scrollYProgress={scrollYProgress}
                 faint
                 speedX={el.speedX}
                 speedY={el.speedY}
+                positionSpread={positionSpread}
                 />
             ))}
             {/* Render blocks (background), then images (foreground) */}
@@ -395,14 +425,21 @@ return (
                 x={el.x}
                 y={el.y}
                 z={el.z}
-                w={el.w}
-                h={el.h}
+                w={el.w * elementScale}
+                h={el.h * elementScale}
                 scrollYProgress={scrollYProgress}
                 speedX={el.speedX}
                 speedY={el.speedY}
+                positionSpread={positionSpread}
                 />
             ))}
-            {ELEMENTS.filter(el => el.type === 'image').map((el) => (
+            {ELEMENTS.filter(el => el.type === 'image')
+              .filter(el => {
+                // Hide img-2 and img-5 on mobile
+                if ((el.id === 'img-2' || el.id === 'img-5') && window.innerWidth < 768) return false;
+                return true;
+              })
+              .map((el) => (
                 <FloatingElement
                 key={el.id}
                 id={el.id}
@@ -411,14 +448,26 @@ return (
                 x={el.x}
                 y={el.y}
                 z={el.z}
-                w={el.w}
-                h={el.h}
+                w={el.w * elementScale}
+                h={el.h * elementScale}
                 scrollYProgress={scrollYProgress}
+                positionSpread={positionSpread}
                 />
             ))}
             <HeroText scrollYProgress={scrollYProgress} />
             </div>
         </motion.div>
+
+        {/* Scroll container for animation progress only */}
+        <div
+            ref={containerRef}
+            style={{
+            position: 'relative',
+            backgroundColor: '#590D0F',
+            height: `${CONFIG.scrollDistance * 100}vh`,
+            touchAction: 'pan-y',
+            }}
+        />
 
         {/* ------------------------------------------------------------------------ */}
         {/* QUOTES SECTION */}
@@ -433,7 +482,7 @@ return (
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            perspective: 1200,
+            perspective: 1000,
           }}
         >
           <motion.div
@@ -475,6 +524,28 @@ return (
             target: scrollSectionRef,
             offset: ['start end', 'end start'],
           });
+          
+          // Slow down scroll-section as it exits - positive Y holds it back from scrolling up
+          const slowDownY = useTransform(
+            scrollSectionScroll, 
+            [0, 0.87, 1], 
+            [0, 0, 400]
+          );
+          
+          // Add blur as it slows down
+          const slowDownBlur = useTransform(
+            scrollSectionScroll,
+            [0, 0.86, 1],
+            [0, 0, 8]
+          );
+          
+          // Add rotateX as it slows down
+          const slowDownRotateX = useTransform(
+            scrollSectionScroll,
+            [0, 0.86, 1],
+            [0, 0, -10]
+          );
+          
           const scrollSectionScaleRaw = useTransform(scrollSectionScroll, [0, 0.15], [0.8, 1]);
           const scrollSectionTiltRaw = useTransform(scrollSectionScroll, [0, 0.15], [-40, 0]);
           const scrollSectionSkewRaw = useTransform(scrollSectionScroll, [0, 0.15], [10, 0]);
@@ -482,10 +553,19 @@ return (
           const scrollSectionTilt = useSpring(scrollSectionTiltRaw, springConfig);
           const scrollSectionSkew = useSpring(scrollSectionSkewRaw, springConfig);
           return (
-            <motion.div className="scroll-section">
+            <motion.div 
+              className="scroll-section" 
+              ref={scrollSectionRef} 
+              style={{ 
+                y: slowDownY, 
+                rotateX: slowDownRotateX,
+                filter: useTransform(slowDownBlur, (v) => `blur(${v}px)`),
+                position: 'relative', 
+                zIndex: 1 
+              }}
+            >
               <motion.div
                 className="section-content-wrapper"
-                ref={scrollSectionRef}
                 style={{
                   scale: scrollSectionScale,
                   rotateX: scrollSectionTilt,
@@ -514,7 +594,7 @@ return (
                         </ParallaxMotion>
                     </motion.div>
                     <div className="part-img-text">
-                        <ParallaxMotion speedX={10} speedY={10} delay={0} easing={[0.17, 0.67, 0.3, 0.99]}>
+                        <ParallaxMotion speedX={isMobileView ? 0 : 10} speedY={isMobileView ? 0 : 10} delay={0} easing={[0.17, 0.67, 0.3, 0.99]}>
                             <motion.p 
                             style={{ y: obsessedImgContent }}
                             >
@@ -525,7 +605,7 @@ return (
                     <div className='part-img'>
                       <ParallaxMotion speedX={8} speedY={8} delay={12} easing={[0.17, 0.67, 0.3, 0.99]}>
                         <motion.img
-                          src="/images/placeholder.webp" 
+                          src="/images/obsessive.webp" 
                           alt="Founders House Obsessive Part" 
                           style={{ y: obsessedImg, scale: 1.1 }}
                         />
@@ -560,7 +640,7 @@ return (
                         </ParallaxMotion>
                     </motion.div>
                     <div className="part-img-text">
-                        <ParallaxMotion speedX={10} speedY={10} delay={0} easing={[0.17, 0.67, 0.3, 0.99]}>
+                        <ParallaxMotion speedX={isMobileView ? 0 : 10} speedY={isMobileView ? 0 : 10} delay={0} easing={[0.17, 0.67, 0.3, 0.99]}>
                             <motion.p 
                             style={{ y: ambitiousImgContent }}
                             >
@@ -571,7 +651,7 @@ return (
                     <div className='part-img'>
                       <ParallaxMotion speedX={8} speedY={8} delay={12} easing={[0.17, 0.67, 0.3, 0.99]}>
                         <motion.img
-                          src="/images/place2.webp" 
+                          src="/images/ambitious.webp" 
                           alt="Founders House Ambitious Part" 
                           style={{ y: ambitiousImg, scale: 1.1 }}
                         />
@@ -644,7 +724,7 @@ return (
                         </ParallaxMotion>
                     </motion.div>
                     <div className="part-img-text">
-                        <ParallaxMotion speedX={10} speedY={10} delay={0} easing={[0.17, 0.67, 0.3, 0.99]}>
+                        <ParallaxMotion speedX={isMobileView ? 0 : 10} speedY={isMobileView ? 0 : 10} delay={0} easing={[0.17, 0.67, 0.3, 0.99]}>
                             <motion.p 
                             style={{ y: nextgenImgContent }}
                             >
@@ -655,7 +735,7 @@ return (
                     <div className='part-img'>
                       <ParallaxMotion speedX={8} speedY={8} delay={12} easing={[0.17, 0.67, 0.3, 0.99]}>
                         <motion.img
-                          src="/images/place2.webp" 
+                          src="/images/nextgen.webp" 
                           alt="Founders House NextGen Part" 
                           style={{ y: nextgenImg, scale: 1.1 }}
                         />
@@ -690,7 +770,7 @@ return (
                         </ParallaxMotion>
                     </motion.div>
                     <div className="part-img-text">
-                        <ParallaxMotion speedX={10} speedY={10} delay={0} easing={[0.17, 0.67, 0.3, 0.99]}>
+                        <ParallaxMotion speedX={isMobileView ? 0 : 10} speedY={isMobileView ? 0 : 10} delay={0} easing={[0.17, 0.67, 0.3, 0.99]}>
                             <motion.p 
                             style={{ y: buildersImgContent }}
                             >
@@ -701,7 +781,7 @@ return (
                     <div className='part-img'>
                       <ParallaxMotion speedX={8} speedY={8} delay={12} easing={[0.17, 0.67, 0.3, 0.99]}>
                         <motion.img
-                          src="/images/place4.webp" 
+                          src="/images/builders.webp" 
                           alt="Founders House Builders Part" 
                           style={{ y: buildersImg, scale: 1.1 }}
                         />
@@ -716,27 +796,68 @@ return (
                 </div>
               </motion.div>
 
-              <motion.div
-                className="join-section"
-              >
-                <div className="join-title">
-                  <p>Only a handful move fast enough to be here, and they build alongside the people who will define what comes next.</p>
-                </div>
-                <div className="join-img">
-                  <ParallaxMotion speedX={8} speedY={8} delay={12} easing={[0.17, 0.67, 0.3, 0.99]}>
-                    <motion.img
-                      className="join-img-img"
-                      src="/images/horses.webp" 
-                      alt="Founders House Join Us" 
-                    />
-                  </ParallaxMotion>
-                  <h4>JOIN US, BUILD WITH US, DEFINE TOMORROW.</h4>
-                </div>
-              </motion.div>
+
+              
             </motion.div>
           );
         })()}
 
+        {/* ------------------------------------------------------------------------ */}
+        {/* JOIN SECTION */}
+        {/* ------------------------------------------------------------------------ */}
+        <motion.div
+          className="join-section"
+        >
+          <div className="join-title">
+            <ParallaxMotion speedX={15} speedY={15} delay={5} easing={[0.17, 0.67, 0.3, 0.99]}>
+              <p>Only a handful move fast enough to be here, and they build alongside the people who will define what comes next.</p>
+            </ParallaxMotion>
+          </div>
+          
+          <div className="join-img">
+            <ParallaxMotion speedX={10} speedY={10} delay={5} easing={[0.17, 0.67, 0.3, 0.99]}>
+              <div className="join-img-container">
+                <ParallaxMotion speedX={24} speedY={24} delay={10} easing={[0.17, 0.67, 0.3, 0.99]}>
+                  <motion.img
+                    className="join-img-img"
+                    src="/images/horses.webp" 
+                    alt="Founders House Join Us"
+                  />
+                </ParallaxMotion>
+                <div className="join-img-content">
+                  <h4>JOIN US, BUILD WITH US, DEFINE TOMORROW.</h4>
+                  <Button className="cta-button">APPLY NOW</Button>
+                </div>
+                {/* Animated squares */}
+                <div className="join-img-square join-square-tl-1" />
+                <div className="join-img-square join-square-tl-2" />
+                <div className="join-img-square join-square-tl-3" />
+                <div className="join-img-square join-square-tr-1" />
+                <div className="join-img-square join-square-tr-2" />
+                <div className="join-img-square join-square-tr-3" />
+                <div className="join-img-square join-square-bl-1" />
+                <div className="join-img-square join-square-bl-2" />
+                <div className="join-img-square join-square-bl-3" />
+                <div className="join-img-square join-square-br-1" />
+                <div className="join-img-square join-square-br-2" />
+                <div className="join-img-square join-square-top-1" />
+                <div className="join-img-square join-square-top-1-a" />
+                <div className="join-img-square join-square-top-1-b" />
+                <div className="join-img-square join-square-top-2" />
+                <div className="join-img-square join-square-top-2-a" />
+                <div className="join-img-square join-square-top-2-b" />
+                <div className="join-img-square join-square-bottom-1" />
+                <div className="join-img-square join-square-bottom-2" />
+              </div>
+            </ParallaxMotion>
+          </div>
+
+          <div className="join-img-shape-container">
+            <ParallaxMotion speedX={5} speedY={5} delay={10} easing={[0.17, 0.67, 0.3, 0.99]}>
+              <div className="join-img-shape"></div>
+            </ParallaxMotion>
+          </div>
+        </motion.div>
     </>
   );
 }

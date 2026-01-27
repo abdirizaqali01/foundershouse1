@@ -1,7 +1,9 @@
 /* Footer Container */
 .footer {
+  position: relative;
+  z-index: 0; 
   width: 100%;
-  background: transparent;
+  background: #2B0A05;
   color: rgba(255, 248, 242, 0.4);
   font-family: 'IBM Plex Sans', sans-serif;
   padding: 4% 0 3.5% 0;
@@ -10,7 +12,7 @@
   flex-direction: column;
   gap: 40px;
   justify-content: space-between;
-  border-top: solid 2px rgba(255, 248, 242, 0.1);
+  border-top: solid 2px rgba(255, 255, 255, 0.1);
 }
 
 /* Section 1: Sponsor Logos Row */
@@ -134,8 +136,7 @@
 /* Responsive Design */
 @media (max-width: 1024px) {
   .footer-content {
-    grid-template-columns: 1fr;
-    gap: 3rem;
+    gap: 1.5rem;
   }
 
   .footer-links {
@@ -160,8 +161,28 @@
     padding: 3rem 0 2rem;
   }
 
+  .footer-sponsors {
+    width: 100%;
+    margin: 0 auto;
+    flex-shrink: 0;
+  }
+
   .sponsor-logos {
     gap: 1.5rem;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .footer-content {
+    display: flex;
+    flex-direction: column;
+    align-items: start;
+    justify-content: start;
+    gap: 2.5rem;
+  }
+
+  .footer-logo {
+    width: 80vw;
   }
 
   .footer-links {
@@ -180,12 +201,14 @@
 
 @media (max-width: 480px) {
   .sponsor-logos {
-    gap: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 3rem;
     padding: 1.5rem 0;
   }
 
   .sponsor-logo {
-    height: clamp(20px, 5vw, 28px);
+    height: clamp(50px, 5vw, 50px);
   }
 
   .footer-content {

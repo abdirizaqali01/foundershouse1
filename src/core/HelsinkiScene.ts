@@ -103,7 +103,7 @@ export class HelsinkiScene {
     }
 
     loadDualModels({
-      mainMapPath: '/models/fh.glb',
+      mainMapPath: '/models/map.glb',
       scene: this.scene,
       camera: this.camera,
       controls: this.controls,

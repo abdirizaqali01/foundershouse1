@@ -333,10 +333,10 @@ export default function JoinPage() {
               </motion.div>
             </div>
 
+            <Footer />
           </motion.div>
         )}
       </AnimatePresence>
-      <Footer />
     </div>
   );
 }

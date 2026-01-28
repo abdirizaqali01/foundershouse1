@@ -384,24 +384,20 @@ export default function AboutPage() {
                         <div className="img-gradient-top" />
                         <div className="img-gradient-bottom" />
                     </div>
-                    <div className="section-5-map-img-container" style={{ mixBlendMode: "multiply", height: "100%", zIndex: 1 }}>
+                    <div className="section-5-map-img-container" style={{ mixBlendMode: "multiply", isolation: "isolate", height: "100%", zIndex: 1 }}>
                       <ParallaxMotion background="#2B0906" speedX={16} speedY={16} easing={[0.17, 0.67, 0.3, 0.99]}>
                         <motion.img
                           className="section-5-map-img"
                           src={SECTION5_MAP_IMG_SRC}
                           alt="2D Map"
-                          style={{ 
-                            mixBlendMode: "multiply",
-                        
-                          }}
                           animate={{ 
                             scale: imgScale,
                             x: isMobile ? "-35%" : "0%"
                           }}
                           transition={{ duration: 0.6, ease: [0.17, 0.67, 0.3, 0.99] }}
                         />
-                    </ParallaxMotion>
-                  </div>
+                      </ParallaxMotion>
+                    </div>
                   <div className="section-5-map-img-container" style={{ height: "100%", zIndex: 2 }}>
                     <ParallaxMotion speedX={16} speedY={16} easing={[0.17, 0.67, 0.3, 0.99]}>
                       <motion.img

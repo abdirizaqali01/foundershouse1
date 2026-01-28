@@ -34,6 +34,7 @@ export default function AboutPage() {
   
   // Detect if we're on tablet portrait or mobile to disable scroll transforms
   const [isTabletPortrait, setIsTabletPortrait] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   
   useEffect(() => {
     const checkScreenSize = () => {
@@ -41,6 +42,7 @@ export default function AboutPage() {
       const height = window.innerHeight;
       // Disable for mobile (<768px) or tablet portrait (768-1050px in portrait)
       setIsTabletPortrait(width < 768 || (width >= 768 && width <= 1050 && height > width));
+      setIsMobile(width < 768);
     };
     checkScreenSize();
     window.addEventListener('resize', checkScreenSize);
@@ -345,7 +347,7 @@ export default function AboutPage() {
                     <motion.img className="img-3" src={SECTION3_IMG_3_SRC} style={isTabletPortrait ? {} : { y: section3img3 }} />
                   </ParallaxMotion>
                 </div>
-                <ParallaxMotion speedX={70} speedY={70} delay={5}>
+                <ParallaxMotion speedX={50} speedY={50} delay={5}>
                   <motion.p style={isTabletPortrait ? {} : { y: section3text }}>WE SUPPORT THESE FOUNDERS DURING THE MOST CRITICAL EARLY STAGES OF BUILDING THROUGH A TIGHT COMMUNITY SHAPED BY COLLABORATION AND SHARED AMBITION—ALL UNDER THE SAME ROOF. BY BRINGING THESE PEOPLE TOGETHER WE CREATE THE CONDITIONS FOR AMBITIOUS COMPANIES TO BE BUILT FASTER AND AT A HIGHER LEVEL. HERE TALENT CONENTRATES AND POTENTIAL MULTIPLIES. </motion.p>
                 </ParallaxMotion>
               </div>
@@ -382,28 +384,42 @@ export default function AboutPage() {
                         <div className="img-gradient-top" />
                         <div className="img-gradient-bottom" />
                     </div>
-                    <div style={{ mixBlendMode: "multiply" }}>
+                    <div className="section-5-map-img-container" style={{ mixBlendMode: "multiply", height: "100%", zIndex: 1 }}>
                       <ParallaxMotion background="#2B0906" speedX={16} speedY={16} easing={[0.17, 0.67, 0.3, 0.99]}>
                         <motion.img
                           className="section-5-map-img"
                           src={SECTION5_MAP_IMG_SRC}
                           alt="2D Map"
-                          style={{ mixBlendMode: "multiply", width: "100%", height: "auto", transform: `skewY(${imgSkew}deg)` }}
-                          animate={{ scale: imgScale }}
+                          style={{ 
+                            mixBlendMode: "multiply",
+                        
+                          }}
+                          animate={{ 
+                            scale: imgScale,
+                            x: isMobile ? "-35%" : "0%"
+                          }}
                           transition={{ duration: 0.6, ease: [0.17, 0.67, 0.3, 0.99] }}
                         />
                     </ParallaxMotion>
                   </div>
-                  <ParallaxMotion speedX={16} speedY={16} easing={[0.17, 0.67, 0.3, 0.99]}>
-                    <motion.img
-                      className="section-5-map-img"
-                      src={SECTION5_MAP_TOP_IMG_SRC}
-                      alt="2D Map Pin"
-                      style={{ width: "100%", height: "auto", transform: `skewY(${imgSkew}deg)`, top: "0%" }}
-                      animate={{ scale: imgScale }}
-                      transition={{ duration: 0.6, ease: [0.17, 0.67, 0.3, 0.99] }}
-                    />
-                  </ParallaxMotion>
+                  <div className="section-5-map-img-container" style={{ height: "100%", zIndex: 2 }}>
+                    <ParallaxMotion speedX={16} speedY={16} easing={[0.17, 0.67, 0.3, 0.99]}>
+                      <motion.img
+                        className="section-5-map-img"
+                        src={SECTION5_MAP_TOP_IMG_SRC}
+                        alt="2D Map Pin"
+                        style={{ 
+                       
+                          top: "0%" 
+                        }}
+                        animate={{ 
+                          scale: imgScale,
+                          x: isMobile ? "-35%" : "0%"
+                        }}
+                        transition={{ duration: 0.6, ease: [0.17, 0.67, 0.3, 0.99] }}
+                      />
+                    </ParallaxMotion>
+                  </div>
                 </div>
                 <motion.div className="content-text" style={{ y: section5Content }}>
                   <ParallaxMotion speedX={40} speedY={45} easing={[0.17, 0.67, 0.3, 0.99]}>
@@ -492,7 +508,7 @@ export default function AboutPage() {
                         exit={{ opacity: 0, y: 5 }}
                         transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
                       >
-                        <img src="images/camilla.webp" alt="Camilla Komulainen" />
+                        <img src="assets/images/team/camilla.webp" alt="Camilla Komulainen" />
                         <h5>started to like horses</h5>
                         <a className="card-email" href="mailto:camilla@wave.ventures">camilla@wave.ventures</a>
                         <a className="card-linkedin" href="https://www.linkedin.com/in/camillakomulainen/">linkedin</a>
@@ -507,7 +523,7 @@ export default function AboutPage() {
                         exit={{ opacity: 0, y: 5 }}
                         transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
                       >
-                        <img src="images/kia.webp" alt="Kia Kanninen" />
+                        <img src="assets/images/team/kia.webp" alt="Kia Kanninen" />
                         <h5>Likes horses</h5>
                         <a className="card-email" href="mailto:kia@wave.ventures">kia@wave.ventures</a>
                         <a className="card-linkedin" href="https://www.linkedin.com/in/kiakanninen/">linkedin</a>
@@ -522,7 +538,7 @@ export default function AboutPage() {
                         exit={{ opacity: 0, y: 5 }}
                         transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
                       >
-                        <img src="images/niklas.webp" alt="Niklas Kervinen" />
+                        <img src="assets/images/team/niklas.webp" alt="Niklas Kervinen" />
                         <h5>Likes horses</h5>
                         <a className="card-email" href="mailto:niklas@wave.ventures">niklas@wave.ventures</a>
                         <a className="card-linkedin" href="https://www.linkedin.com/in/niklas-kervinen/">linkedin</a>
@@ -537,7 +553,7 @@ export default function AboutPage() {
                         exit={{ opacity: 0, y: 5 }}
                         transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
                       >
-                        <img src="images/johannes.webp" alt="Johannes Korpela" />
+                        <img src="assets/images/team/johannes.webp" alt="Johannes Korpela" />
                         <h5>Likes horses</h5>
                         <a className="card-email" href="mailto:johannes@wave.ventures">johannes@wave.ventures</a>
                         <a className="card-linkedin" href="https://www.linkedin.com/in/korpelajohannes/">linkedin</a>
@@ -552,7 +568,7 @@ export default function AboutPage() {
                         exit={{ opacity: 0, y: 5 }}
                         transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
                       >
-                        <img src="images/robin.webp" alt="Robin Hansson" />
+                        <img src="assets/images/team/robin.webp" alt="Robin Hansson" />
                         <h5>Likes horses</h5>
                         <a className="card-email" href="mailto:robin@wave.ventures">robin@wave.ventures</a>
                         <a className="card-linkedin" href="https://www.linkedin.com/in/robin-hansson-/">linkedin</a>
@@ -562,10 +578,11 @@ export default function AboutPage() {
                 </div>
               </ParallaxMotion>
             </div>
+
+            <Footer />
           </motion.div>
         )}
       </AnimatePresence>
-      <Footer />
     </div>
   );
 }

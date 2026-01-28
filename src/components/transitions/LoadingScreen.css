@@ -778,8 +778,11 @@
 /* Skip intro button - minimal, founder-friendly style */
 .skip-intro-button {
   position: fixed;
-  bottom: 2rem;
-  right: 2rem;
+  bottom: 1rem;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   padding: 0;
   background: transparent;
   border: none;

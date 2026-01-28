@@ -289,7 +289,7 @@ export default function AboutPage() {
                       className="header-h1"
                       initial={{ y: 175 }}
                       animate={{ y: 0 }}
-                      transition={{ delay: 2.4, duration: 1.3, ease: [0.11, 0.45, 0.08, 1.00] }}
+                      transition={{ delay: 0.5, duration: 1.8, ease: [0.11, 0.45, 0.08, 1.00] }}
                       >
                         ABOUT
                     </motion.h1>
@@ -430,9 +430,10 @@ export default function AboutPage() {
                 <ParallaxMotion speedX={15} speedY={15} easing={[0.17, 0.67, 0.3, 0.99]}>
                   <div className="team-img-container">
                     
+                    {/*
                     <img src={FOUNDERS_HOUSE_TEAM_IMG_SRC} alt="Founders House Team" />
+                    */}
                     
-                    {/*}
                     <GridDistortion
                       imageSrc={FOUNDERS_HOUSE_TEAM_IMG_SRC}
                       grid={20}
@@ -441,7 +442,7 @@ export default function AboutPage() {
                       relaxation={0.95}
                       className="team-distortion-img"
                     />
-                    */}
+                    
                   </div>
                 </ParallaxMotion>
               </div>

@@ -9,6 +9,7 @@ import '../styles/FlyThroughHeroMobile.css';
 import { QuoteCard } from '../sections/quotes/QuoteCard.tsx';
 import { quoteCardsData } from '../sections/quotes/quoteCardsData';
 import { Button } from '../../components/ui';
+import GridDistortion from '../../effects/GridDistortion.tsx';
 
 // =============================================================================
 // CONFIGURATION
@@ -627,6 +628,19 @@ return (
                           alt="Founders House Obsessive Part" 
                           style={{ y: obsessedImg, scale: 1.1 }}
                         />
+                        
+                        {/*
+                        <motion.div style={{ y: obsessedImg, scale: 1.1 }}>   
+                          <GridDistortion
+                            imageSrc="/assets/images/values/obsessive_2.webp" 
+                            grid={20}
+                            mouse={0.25}
+                            strength={0.01}
+                            relaxation={0.95}
+                            className="team-distortion-img"
+                          />
+                        </motion.div>
+                        */}
                       </ParallaxMotion>
                     </div>
                   </div>

@@ -364,17 +364,17 @@ export const LoadingScreen = ({ onComplete, duration, scrollProgress, isReturnVi
           </div>
         </div>
         
-        {/*
+        
         {showSkipButton && stage !== 'complete' && stage !== 'map-slide-in' && stage !== 'map-expand' && (
           <button
             className="skip-intro-button"
             onClick={handleSkip}
             aria-label="Skip to map"
           >
-            → Explore
+            skip
           </button>
         )}
-        */}
+        
       </div>
     </motion.div>
   )

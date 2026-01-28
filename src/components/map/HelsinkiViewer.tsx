@@ -4,6 +4,7 @@
  */
 
 import { useEffect, useRef, useState, useCallback } from 'react'
+import { motion } from 'framer-motion'
 import { HelsinkiScene } from '../../core'
 import type { PointOfInterest } from '../../constants/poi'
 import { POINTS_OF_INTEREST } from '../../constants/poi'
@@ -58,6 +59,7 @@ export const HelsinkiViewer = ({
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const lastInteractionTime = useRef<number>(Date.now())
   const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 })
+  const targetCursorPosition = useRef({ x: 0, y: 0 })
   const [showDragIndicator, setShowDragIndicator] = useState(true)
 
   const hasInteractedRef = useRef(false)
@@ -97,7 +99,7 @@ export const HelsinkiViewer = ({
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-       setCursorPosition({ x: e.clientX, y: e.clientY })
+       targetCursorPosition.current = { x: e.clientX, y: e.clientY }
       const target = document.elementFromPoint(e.clientX, e.clientY)
       const isInteractive = !!target?.closest(
         'a, button, .clickable, .hamburger-menu, .logo-container, .poi-navigator-wrapper, .full-screen-menu'
@@ -116,27 +118,48 @@ export const HelsinkiViewer = ({
     }
   }, [])
 
+  // Smooth cursor animation with lerp
+  useEffect(() => {
+    let animationFrameId: number
+
+    const smoothCursor = () => {
+      setCursorPosition(prev => {
+        const dx = targetCursorPosition.current.x - prev.x
+        const dy = targetCursorPosition.current.y - prev.y
+        
+        // Lerp factor - lower = smoother but slower, higher = faster but less smooth
+        const lerp = 0.3
+        
+        return {
+          x: prev.x + dx * lerp,
+          y: prev.y + dy * lerp
+        }
+      })
+      
+      animationFrameId = requestAnimationFrame(smoothCursor)
+    }
+
+    animationFrameId = requestAnimationFrame(smoothCursor)
+
+    return () => cancelAnimationFrame(animationFrameId)
+  }, [])
+
   useEffect(() => {
     if (scrollProgress >= 1) {
       setShowHeroText(false)
       setShowUIState(false)
       if (fadeTimers.current.hero) clearTimeout(fadeTimers.current.hero)
-      if (fadeTimers.current.ui) clearTimeout(fadeTimers.current.ui)
       fadeTimers.current.hero = setTimeout(() => {
         setShowHeroText(true)
       }, 800)
-      fadeTimers.current.ui = setTimeout(() => {
-        setShowUIState(true)
-      }, 1800)
+      setShowUIState(true)
     } else {
       setShowHeroText(false)
       setShowUIState(false)
       if (fadeTimers.current.hero) clearTimeout(fadeTimers.current.hero)
-      if (fadeTimers.current.ui) clearTimeout(fadeTimers.current.ui)
     }
     return () => {
       if (fadeTimers.current.hero) clearTimeout(fadeTimers.current.hero)
-      if (fadeTimers.current.ui) clearTimeout(fadeTimers.current.ui)
     }
   }, [scrollProgress])
 
@@ -428,7 +451,7 @@ export const HelsinkiViewer = ({
         className="hero-text-container"
         style={{
           opacity: showHeroText ? heroTextOpacity : 0,
-          transition: 'opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1)',
+          transition: 'opacity 3.6s cubic-bezier(0.11, 0.45, 0.08, 1.00) 0.6s',
           pointerEvents: 'none',
         }}
       >
@@ -460,39 +483,50 @@ export const HelsinkiViewer = ({
             <span className="hero-title-founders">FOUNDERS</span> <span className="hero-title-house">HOUSE</span>
           </h1>
 
-          {showHeroText && heroTextOpacity > 0.5 && (
-            <div className="hero-line-wrapper">
-              <div className="hero-vertical-line"></div>
-              <a 
-                href="#" 
-                className="hero-learn-more hero-learn-more-desktop clickable"
-                onClick={(e) => handleLearnMoreClick(e)}
-              >
-                Learn more
-              </a>
-              <Button className="hero-learn-more-btn" onClick={() => handleLearnMoreClick()}>
-                Learn more
-              </Button>
-            </div>
-          )}
+          <div 
+            className="hero-line-wrapper"
+            style={{
+              opacity: showHeroText ? heroTextOpacity : 0,
+              pointerEvents: showHeroText && heroTextOpacity > 0.5 ? 'auto' : 'none',
+              transition: 'opacity 0.3s cubic-bezier(0.22, 1, 0.36, 1)'
+            }}
+          >
+            <Button 
+              className="hero-learn-more-btn" 
+              onClick={() => handleLearnMoreClick()}
+            >
+              Learn more
+            </Button>
+          </div>
         </div>
       </div>
 
       {showUIState && (
-        <div className="poi-navigator-wrapper">
+        <motion.div 
+          className="poi-navigator-wrapper"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ 
+            delay: 0,
+            duration: 0.4,
+            ease: [0.22, 1, 0.36, 1]
+          }}
+        >
           <POINavigator onPOISelect={handlePOISelect} initialPOI="FOUNDERS_HOUSE" />
-        </div>
+        </motion.div>
       )}
 
-      {scrollProgress >= 1 && !isHoveringInteractive && (
+      {scrollProgress >= 1 && (
         <div
           className="drag-cursor-indicator"
           style={{
             left: `${cursorPosition.x}px`,
             top: `${cursorPosition.y}px`,
+            opacity: isHoveringInteractive ? 0 : 1,
+            transition: 'opacity 0.3s cubic-bezier(0.22, 1, 0.36, 1)',
           }}
         >
-          <img src="/assets/icons/dragnexplore.svg" alt="Drag to explore" className="cursor-icon" />
+          <img src="/assets/icons/mapdragicon.svg" alt="Drag to explore" className="cursor-icon" />
         </div>
       )}
 

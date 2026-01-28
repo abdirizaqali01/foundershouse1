@@ -278,7 +278,9 @@ export const LoadingScreen = ({ onComplete, duration, scrollProgress, isReturnVi
             >HELSINKI, FINLAND</span>
           </>}
           <div className={`text-centered align-left${stage === 'map-slide-in' ? ' text-pushed-by-box' : ''}${stage === 'map-expand' ? ' text-pushed-expand' : ''}`} style={{ opacity: !isReturnVisit && (stage === 'text1' || stage === 'text2' || stage === 'map-slide-in' || stage === 'map-expand' || stage === 'complete') ? 1 : 0 }}>
-            <div style={{ display: stage === 'text1' && showText1 ? 'block' : 'none' }}>
+            <div 
+              style={{ display: stage === 'text1' && showText1 ? 'block' : 'none' }}
+              >
               <div className="fade-up-wrapper"><AnimatedText text="FOR THE NEXT" fadeUp={true} fadeOut={fadeOutText1} /></div>
               <div className="fade-up-wrapper"><AnimatedText text="FOUNDER GENERATION" fadeUp={true} fadeOut={fadeOutText1} /></div>
             </div>
@@ -305,10 +307,9 @@ export const LoadingScreen = ({ onComplete, duration, scrollProgress, isReturnVi
 
         {showLogo && (
           <div
-            className={`loading-logo ${shouldBlurLogo ? 'blur-out' : ''}`}
-            style={{ height: '76px', width: 'auto' }}
+            className={`loading-logo ${shouldBlurLogo ? 'blur-out' : ""}`}
           >
-            <img src="/assets/logos/fhlogo_horizontal.png" alt="Founders House" style={{ height: '100%', width: 'auto', display: 'block' }} />
+            <img src="/assets/logos/fhlogo_horizontal.png" alt="Founders House" />
           </div>
         )}
         {showLoadingBar && (
@@ -362,7 +363,8 @@ export const LoadingScreen = ({ onComplete, duration, scrollProgress, isReturnVi
             />
           </div>
         </div>
-
+        
+        {/*
         {showSkipButton && stage !== 'complete' && stage !== 'map-slide-in' && stage !== 'map-expand' && (
           <button
             className="skip-intro-button"
@@ -372,6 +374,7 @@ export const LoadingScreen = ({ onComplete, duration, scrollProgress, isReturnVi
             → Explore
           </button>
         )}
+        */}
       </div>
     </motion.div>
   )

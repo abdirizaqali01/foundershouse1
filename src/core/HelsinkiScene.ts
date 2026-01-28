@@ -122,7 +122,7 @@ export class HelsinkiScene {
     this.createBoundaryWireframe()
 
     loadDualModels({
-      mainMapPath: '/assets/models/fh.glb',
+      mainMapPath: '/models/map.glb',
       scene: this.scene,
       camera: this.camera,
       controls: this.controls,

@@ -9,6 +9,7 @@ import '../styles/FlyThroughHeroMobile.css';
 import { QuoteCard } from '../sections/quotes/QuoteCard.tsx';
 import { quoteCardsData } from '../sections/quotes/quoteCardsData';
 import { Button } from '../../components/ui';
+import { NavBar } from '../../components/layout';
 import GridDistortion from '../../effects/GridDistortion.tsx';
 
 // =============================================================================
@@ -255,8 +256,14 @@ function HeroText({ scrollYProgress }: { scrollYProgress: MotionValue<number> })
 
 export function FlyThroughHero() { 
   const navigate = useNavigate();
-  
-  // ------------------------------------------------------------------------
+  const [showNavBar, setShowNavBar] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowNavBar(true);
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
   // RESPONSIVE SCALING FOR FLOATING ELEMENTS
   // ------------------------------------------------------------------------
   const [elementScale, setElementScale] = useState(1);
@@ -377,6 +384,8 @@ export function FlyThroughHero() {
     
 return (
     <>
+        <NavBar logoColor="dark" hamburgerColor="#FFF8F2" opacity={showNavBar ? 1 : 0} />
+        
         {/* Fixed hero viewport, fades out at end, fades back in if user scrolls up */}
         <motion.div
             style={{

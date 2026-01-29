@@ -371,7 +371,7 @@ export const LoadingScreen = ({ onComplete, duration, scrollProgress, isReturnVi
             onClick={handleSkip}
             aria-label="Skip to map"
           >
-            skip
+            skip ahead
           </button>
         )}
         

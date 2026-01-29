@@ -50,10 +50,11 @@ export const FullScreenMenu = ({ isOpen, onClose }: FullScreenMenuProps) => {
           transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
           onMouseMove={handleMouseMove}
         >
+          {/*}
           <div className="menu-header">
             <img src="/assets/logos/logoWhite.png" alt="Founders House" className="menu-logo" />
             <AnimatedHamburger isOpen={isOpen} onClick={onClose} />
-          </div>
+          </div>*/}
 
           <div className="fullscreen-menu-content">
             <div className="menu-left">

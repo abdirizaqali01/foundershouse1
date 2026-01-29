@@ -9,11 +9,11 @@ import { HelsinkiScene } from '../../core'
 import type { PointOfInterest } from '../../constants/poi'
 import { POINTS_OF_INTEREST } from '../../constants/poi'
 import { POINavigator } from './POINavigator'
-import { MagneticElement } from '../ui'
-import { AnimatedHamburger, Button } from '../ui'
-import { FullScreenMenu } from '../layout'
+import { Button } from '../ui'
+import { NavBar } from '../layout'
 import './HelsinkiViewer.css'
 import './HelsinkiViewerMobile.css'
+import ParallaxMotion from '../../effects/ParallaxMotion'
 
 interface MapLoadingState {
   isLoaded: boolean
@@ -54,13 +54,15 @@ export const HelsinkiViewer = ({
   const [heroTextOpacity, setHeroTextOpacity] = useState<number>(1)
   const [showHeroText, setShowHeroText] = useState(false)
   const [showUIState, setShowUIState] = useState(false)
+  const [showNavBar, setShowNavBar] = useState(false)
+  const [showCustomCursor, setShowCustomCursor] = useState(false)
   const fadeTimers = useRef<{ hero?: NodeJS.Timeout; ui?: NodeJS.Timeout }>({})
   const [isCameraFlying, setIsCameraFlying] = useState(false)
-  const [isMenuOpen, setIsMenuOpen] = useState(false)
   const lastInteractionTime = useRef<number>(Date.now())
   const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 })
   const targetCursorPosition = useRef({ x: 0, y: 0 })
   const [showDragIndicator, setShowDragIndicator] = useState(true)
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
 
   const hasInteractedRef = useRef(false)
   const [isTransitionActive, setIsTransitionActive] = useState(false)
@@ -102,13 +104,18 @@ export const HelsinkiViewer = ({
        targetCursorPosition.current = { x: e.clientX, y: e.clientY }
       const target = document.elementFromPoint(e.clientX, e.clientY)
       const isInteractive = !!target?.closest(
-        'a, button, .clickable, .hamburger-menu, .logo-container, .poi-navigator-wrapper, .full-screen-menu'
+        'a, button, .clickable, .navbar, .navbar-hamburger, .navbar-logo-container, .poi-navigator-wrapper, .full-screen-menu'
       )
       if (isInteractive !== hoveringInteractiveRef.current) {
         hoveringInteractiveRef.current = isInteractive
         setIsHoveringInteractive(isInteractive)
       }
 
+      // Update mousePos for parallax
+      const { innerWidth, innerHeight } = window
+      const x = (e.clientX / innerWidth) * 2 - 1
+      const y = (e.clientY / innerHeight) * 2 - 1
+      setMousePos({ x, y })
     }
 
     window.addEventListener('mousemove', handleMouseMove)
@@ -153,9 +160,19 @@ export const HelsinkiViewer = ({
         setShowHeroText(true)
       }, 800)
       setShowUIState(true)
+      // Delay navbar fade-in by 2.5 seconds
+      setTimeout(() => {
+        setShowNavBar(true)
+      }, 2500)
+      // Delay custom cursor fade-in by 3.5 seconds
+      setTimeout(() => {
+        setShowCustomCursor(true)
+      }, 3500)
     } else {
       setShowHeroText(false)
       setShowUIState(false)
+      setShowNavBar(false)
+      setShowCustomCursor(false)
       if (fadeTimers.current.hero) clearTimeout(fadeTimers.current.hero)
     }
     return () => {
@@ -398,43 +415,11 @@ export const HelsinkiViewer = ({
         <div className={`vignette-overlay ${isCameraFlying ? 'active' : ''}`} />
       </div>
 
-
-      {/* Logo - Top Left with Magnetic Effect & Rotation */}
-      <MagneticElement
-        className="logo-container"
-        style={{
-          opacity: showUIState && !isTransitionActive && !isMenuOpen ? 1 : 0,
-          transition: isTransitionActive
-            ? 'opacity 1.5s cubic-bezier(0.22, 1, 0.36, 1)'
-            : 'opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1)',
-          pointerEvents: showUIState && !isMenuOpen ? 'auto' : 'none',
-        }}
-        strength={0.25}
-        range={120}
-        rotate={true}
-        rotateDegrees={5}
-      >
-        <img src="/assets/logos/logo.svg" alt="Founders House Logo" className="cube-logo" />
-      </MagneticElement>
-
-      <MagneticElement
-        className="hamburger-menu"
-        style={{
-          opacity: showUIState && !isTransitionActive && !isMenuOpen ? 1 : 0,
-          transition: isTransitionActive
-            ? 'opacity 1.5s cubic-bezier(0.22, 1, 0.36, 1)'
-            : 'opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1)',
-          pointerEvents: showUIState && !isMenuOpen ? 'auto' : 'none',
-        }}
-        strength={0.25}
-        range={120}
-      >
-        <AnimatedHamburger
-          isOpen={isMenuOpen}
-          onClick={() => setIsMenuOpen(!isMenuOpen)}
-          color="#D82E11"
-        />
-      </MagneticElement>
+      <NavBar 
+        logoColor="light"
+        hamburgerColor="#D82E11"
+        opacity={showNavBar && !isTransitionActive ? 1 : 0}
+      />
 
       <div
         className="ui-overlay"
@@ -475,11 +460,23 @@ export const HelsinkiViewer = ({
         )}
 
         <div className="hero-text-wrapper">
-          <div className="hero-subtext-row">
+          <div 
+            className="hero-subtext-row"
+            style={{
+              transform: `translate(${mousePos.x * 8}px, ${mousePos.y * 8}px)`,
+              transition: 'transform 2s cubic-bezier(0.17, 0.67, 0.3, 0.99)'
+            }}
+          >
             <p className="hero-subtext hero-subtext-left">BUILT FOR THE OBSESSED.</p>
             <p className="hero-subtext hero-subtext-right">BUILT FOR THE EXCEPTIONAL.</p>
           </div>
-          <h1 className="hero-title">
+          <h1 
+            className="hero-title"
+            style={{
+              transform: `translate(${mousePos.x * 15}px, ${mousePos.y * 15}px)`,
+              transition: 'transform 2s cubic-bezier(0.17, 0.67, 0.3, 0.99)'
+            }}
+          >
             <span className="hero-title-founders">FOUNDERS</span> <span className="hero-title-house">HOUSE</span>
           </h1>
 
@@ -488,7 +485,8 @@ export const HelsinkiViewer = ({
             style={{
               opacity: showHeroText ? heroTextOpacity : 0,
               pointerEvents: showHeroText && heroTextOpacity > 0.5 ? 'auto' : 'none',
-              transition: 'opacity 0.3s cubic-bezier(0.22, 1, 0.36, 1)'
+              transition: 'opacity 0.3s cubic-bezier(0.22, 1, 0.36, 1), transform 2s cubic-bezier(0.17, 0.67, 0.3, 0.99)',
+              transform: `translate(${mousePos.x * 24}px, ${mousePos.y * 24}px)`
             }}
           >
             <Button 
@@ -517,20 +515,19 @@ export const HelsinkiViewer = ({
       )}
 
       {scrollProgress >= 1 && (
-        <div
+        <motion.div
           className="drag-cursor-indicator"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: showCustomCursor && !isHoveringInteractive ? 1 : 0 }}
+          transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
           style={{
             left: `${cursorPosition.x}px`,
             top: `${cursorPosition.y}px`,
-            opacity: isHoveringInteractive ? 0 : 1,
-            transition: 'opacity 0.3s cubic-bezier(0.22, 1, 0.36, 1)',
           }}
         >
           <img src="/assets/icons/mapdragicon.svg" alt="Drag to explore" className="cursor-icon" />
-        </div>
+        </motion.div>
       )}
-
-      <FullScreenMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
     </>
   )
 }

@@ -3,8 +3,8 @@ import "./pageMobile.css";
 import React, { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence, useScroll, useTransform, useMotionValue } from "framer-motion";
 import ParallaxMotion from '../effects/ParallaxMotion.tsx';
-import { AnimatedHamburger, Button } from '../components/ui';
-import { FullScreenMenu } from '../components/layout';
+import { Button } from '../components/ui';
+import { NavBar } from '../components/layout';
 import { eventsData } from './hooks/events-data.ts';
 
 const HEADER_IMG_SRC = "/assets/images/events/FH_people1.webp";
@@ -84,7 +84,7 @@ const shuffleText = (
 
 export default function EventsPage() {
   const [stage, setStage] = useState(1);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [showNavBar, setShowNavBar] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const cursorX = useMotionValue(0);
@@ -100,6 +100,13 @@ export default function EventsPage() {
     const matches = window.matchMedia('(max-width: 768px)').matches;
     return matches;
   });
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowNavBar(true);
+    }, 6000);
+    return () => clearTimeout(timer);
+  }, []);
   const [isCardLocked, setIsCardLocked] = useState(false);
   const titleRef = useRef<HTMLHeadingElement>(null);
   const descriptionRef = useRef<HTMLHeadingElement>(null);
@@ -467,27 +474,8 @@ export default function EventsPage() {
         </motion.div>
       )}
 
-      <AnimatePresence>
-        {stage === 2 && (
-          <motion.header
-            className="events-header"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{
-              delay: 2.6,
-              duration: 1,
-              ease: [0.11, 0.45, 0.08, 1.00]
-            }}
-          >
-            <img src="/assets/logos/logoWhite.png" alt="Founders House" className="header-logo" />
-            <div onClick={() => setIsMenuOpen(!isMenuOpen)}>
-              <AnimatedHamburger isOpen={isMenuOpen} onClick={() => setIsMenuOpen(!isMenuOpen)} />
-            </div>
-          </motion.header>
-        )}
-      </AnimatePresence>
+      <NavBar logoColor="dark" hamburgerColor="#FFF8F2" opacity={showNavBar ? 1 : 0} />
 
-      <FullScreenMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
       {/*---------------------------------------------------------------------*/}
       {/* Persistent animated image container */}
       {/*---------------------------------------------------------------------*/}

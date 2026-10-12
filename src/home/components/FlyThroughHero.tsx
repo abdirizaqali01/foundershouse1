@@ -666,7 +666,7 @@ function ScrollSection({ isMobileView }: ScrollSectionProps) {
 // MAIN COMPONENT
 // =============================================================================
 
-export function FlyThroughHero({ audioRef, audio2Ref }: { audioRef?: React.MutableRefObject<HTMLAudioElement | null>, audio2Ref?: React.MutableRefObject<HTMLAudioElement | null> }) {
+export function FlyThroughHero() {
   const { navigateWithTransition } = useTransition();
   const [showNavBar, setShowNavBar] = useState(false);
 
@@ -743,7 +743,7 @@ export function FlyThroughHero({ audioRef, audio2Ref }: { audioRef?: React.Mutab
     
 return (
     <>
-        <NavBar logoColor="dark" hamburgerColor="#FFF8F2" streakColor="rgba(216, 46, 17, 1)" opacity={showNavBar ? 1 : 0} audioRef={audioRef} audio2Ref={audio2Ref} />
+        <NavBar logoColor="dark" hamburgerColor="#FFF8F2" streakColor="rgba(216, 46, 17, 1)" opacity={showNavBar ? 1 : 0} />
         
         {/* Fixed hero viewport, fades out at end, fades back in if user scrolls up */}
         <motion.div

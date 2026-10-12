@@ -35,30 +35,10 @@ function AppContent() {
   const location = useLocation()
 
   const isInitialMount = useRef(true)
-  const audioRef = useRef<HTMLAudioElement | null>(null)
-  const audio2Ref = useRef<HTMLAudioElement | null>(null) // Second audio track
-  const audioContextRef = useRef<AudioContext | null>(null)
-  const audioSourceRef = useRef<MediaElementAudioSourceNode | null>(null)
-  const audio2SourceRef = useRef<MediaElementAudioSourceNode | null>(null) // Second audio source
-  const lowPassFilterRef = useRef<BiquadFilterNode | null>(null)
-  const gainNodeRef = useRef<GainNode | null>(null)
-  const gain2NodeRef = useRef<GainNode | null>(null) // Separate gain for second track
-  const previousPathnameRef = useRef<string>(location.pathname)
-  // Restore user's audio preference from localStorage
-  const getInitialMutedState = () => {
-    try {
-      const saved = localStorage.getItem('fh_audio_muted')
-      return saved === 'true'
-    } catch {
-      return false
-    }
-  }
-  const isUserMutedRef = useRef(getInitialMutedState())
   const [isReturnVisit, setIsReturnVisit] = useState(() => {
     return sessionStorage.getItem('hasVisitedMap') === 'true'
   })
   const [hasMounted, setHasMounted] = useState(false)
-  const [audioReady, setAudioReady] = useState(false)
   const pageMetaRef = useRef<Record<string, PageMetaConfig>>({
     '/': {
       title: 'Founders House — Helsinki',
@@ -198,128 +178,7 @@ function AppContent() {
 
     // Initialize cookie manager
     initializeCookieManager()
-
-    // Set up audio context after component mounts
-    if (audioRef.current && audio2Ref.current) {
-      setAudioReady(true)
-    }
   }, [])
-
-  // Setup audio filter chain when audio is initialized
-  useEffect(() => {
-    // console.log('🔍 Audio setup check:', {
-    //   hasAudioElement: !!audioRef.current,
-    //   hasAudioContext: !!audioContextRef.current,
-    //   audioReady
-    // })
-
-    if (audioReady && audioRef.current && audio2Ref.current && !audioContextRef.current) {
-      try {
-        // console.log('🎵 Setting up audio filter chain...')
-
-        // Create audio context
-        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)()
-
-        // === TRACK 1: Main music with low-pass filter ===
-        audioSourceRef.current = audioContextRef.current.createMediaElementSource(audioRef.current)
-
-        // Create low pass filter for music
-        lowPassFilterRef.current = audioContextRef.current.createBiquadFilter()
-        lowPassFilterRef.current.type = 'lowpass'
-        lowPassFilterRef.current.frequency.value = 22000 // Start with no filtering (above human hearing)
-        lowPassFilterRef.current.Q.value = 1
-
-        // Create gain node for music
-        gainNodeRef.current = audioContextRef.current.createGain()
-        // Initialize gain based on user's saved preference
-        // If not muted, set to target volumes; if muted, start at 0
-        const initialMusicGain = isUserMutedRef.current ? 0 : 0.5
-        gainNodeRef.current.gain.value = initialMusicGain
-
-        // Connect: source -> filter -> gain -> destination
-        audioSourceRef.current.connect(lowPassFilterRef.current)
-        lowPassFilterRef.current.connect(gainNodeRef.current)
-        gainNodeRef.current.connect(audioContextRef.current.destination)
-
-        // === TRACK 2: Ambience with volume control only ===
-        audio2SourceRef.current = audioContextRef.current.createMediaElementSource(audio2Ref.current)
-
-        // Create gain node for ambience (no filter)
-        gain2NodeRef.current = audioContextRef.current.createGain()
-        // Initialize gain based on user's saved preference and current page
-        const isMapPage = location.pathname === '/'
-        const initialAmbienceGain = isUserMutedRef.current ? 0 : (isMapPage ? 0.5 : 0)
-        gain2NodeRef.current.gain.value = initialAmbienceGain
-
-        // Connect: source -> gain -> destination (no filter)
-        audio2SourceRef.current.connect(gain2NodeRef.current)
-        gain2NodeRef.current.connect(audioContextRef.current.destination)
-
-        // console.log('✅ Audio filter chain initialized successfully', {
-        //   contextState: audioContextRef.current.state,
-        //   sampleRate: audioContextRef.current.sampleRate
-        // })
-
-        // Expose gain nodes and mute state to window for NavBar access
-        ;(window as any).__gainNodeRef = gainNodeRef
-        ;(window as any).__gain2NodeRef = gain2NodeRef
-        ;(window as any).__isUserMutedRef = isUserMutedRef
-        ;(window as any).__audioContext = audioContextRef.current
-
-        // Resume audio context if it's suspended (required in some browsers)
-        if (audioContextRef.current.state === 'suspended') {
-          audioContextRef.current.resume().then(() => {
-            // console.log('✅ AudioContext resumed')
-          })
-        }
-
-        // Store reference globally for LoadingScreen to access
-        (window as any).__audioContext = audioContextRef.current
-      } catch (err) {
-        console.error('❌ Failed to setup audio context:', err)
-      }
-    }
-  }, [audioReady])
-
-  // Control low pass filter and ambience volume based on route
-  useEffect(() => {
-    const isMapPage = location.pathname === '/' // Only map page has no filter
-    const wasMapPage = previousPathnameRef.current === '/'
-    const goingToMap = isMapPage && !wasMapPage // Navigating TO map page
-
-    // Use longer transition time when going TO map page for smoother effect
-    const timeConstant = goingToMap ? 2.5 : 1.5
-
-    // === TRACK 1: Low-pass filter for music ===
-    if (lowPassFilterRef.current && audioContextRef.current) {
-      const targetFrequency = isMapPage ? 22000 : 200 // No filter on map, 200Hz on other pages
-
-      lowPassFilterRef.current.frequency.setTargetAtTime(
-        targetFrequency,
-        audioContextRef.current.currentTime,
-        timeConstant
-      )
-      // console.log(`🎵 Music filter ${isMapPage ? 'disabled' : 'enabled (200Hz)'} for ${location.pathname} (transition: ${timeConstant}s)`)
-    }
-
-    // === TRACK 2: Volume control for ambience (no pause/play, just volume fade) ===
-    // Only adjust ambience if user hasn't manually muted
-    if (gain2NodeRef.current && audioContextRef.current && audio2Ref.current && !isUserMutedRef.current) {
-      const targetVolume = isMapPage ? 0.5 : 0 // 0.5 on map page, 0 on other pages
-
-      gain2NodeRef.current.gain.setTargetAtTime(
-        targetVolume,
-        audioContextRef.current.currentTime,
-        timeConstant
-      )
-
-      // console.log(`🌊 Ambience ${isMapPage ? 'enabled (0.5)' : 'muted (0)'} for ${location.pathname} (transition: ${timeConstant}s)`)
-    }
-
-    // Update previous pathname
-    previousPathnameRef.current = location.pathname
-  }, [location.pathname])
-
 
   useEffect(() => {
     const lenis = new Lenis({
@@ -347,16 +206,6 @@ function AppContent() {
 
   return (
     <div className="App">
-      {/* Audio elements - Ambient Soundscape */}
-      <audio ref={audioRef} loop preload="auto">
-        <source src="/assets/audio/background-music.mp3" type="audio/mpeg" />
-      </audio>
-
-      {/* Second audio track - Ambient City Soundscape */}
-      <audio ref={audio2Ref} loop preload="auto">
-        <source src="/assets/audio/background-sounds.mp3" type="audio/mpeg" />
-      </audio>
-
       <Routes>
         <Route
           path="/"
@@ -370,16 +219,14 @@ function AppContent() {
                 scrollProgress={scrollProgress}
                 onScrollProgressChange={setScrollProgress}
                 isReturnVisit={isReturnVisit}
-                audioRef={audioRef}
-                audio2Ref={audio2Ref}
               />
             </PageContent>
           }
         />
-        <Route path="/home" element={<PageContent><Home audioRef={audioRef} audio2Ref={audio2Ref} /></PageContent>} />
-        <Route path="/about" element={<PageContent><AboutPage audioRef={audioRef} audio2Ref={audio2Ref} /></PageContent>} />
-        <Route path="/join" element={<PageContent><JoinPage audioRef={audioRef} audio2Ref={audio2Ref} /></PageContent>} />
-        <Route path="/events" element={<PageContent><EventsPage audioRef={audioRef} audio2Ref={audio2Ref} /></PageContent>} />
+        <Route path="/home" element={<PageContent><Home /></PageContent>} />
+        <Route path="/about" element={<PageContent><AboutPage /></PageContent>} />
+        <Route path="/join" element={<PageContent><JoinPage /></PageContent>} />
+        <Route path="/events" element={<PageContent><EventsPage /></PageContent>} />
         <Route path="/privacy-policy" element={<PageContent><PrivacyPolicyPage /></PageContent>} />
         <Route path="/cookies" element={<PageContent><CookiesPage /></PageContent>} />
         <Route path="*" element={<PageContent><NotFoundPage /></PageContent>} />

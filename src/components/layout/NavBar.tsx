@@ -4,7 +4,7 @@
  * Used across all pages for consistent navigation
  */
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useTransition } from '../transitions/TransitionContext'
 import { AnimatedHamburger } from '../ui'
 import { FullScreenMenu } from './FullScreenMenu'
@@ -18,8 +18,6 @@ interface NavBarProps {
   style?: React.CSSProperties
   opacity?: number // Control visibility with smooth transition
   onMenuChange?: (isOpen: boolean) => void // Callback when menu state changes
-  audioRef?: React.MutableRefObject<HTMLAudioElement | null> // Audio control
-  audio2Ref?: React.MutableRefObject<HTMLAudioElement | null> // Second audio control
 }
 
 export const NavBar = ({ 
@@ -29,157 +27,14 @@ export const NavBar = ({
   className = '',
   style = {},
   opacity = 1,
-  onMenuChange,
-  audioRef,
-  audio2Ref
+  onMenuChange
 }: NavBarProps) => {
   const { navigateWithTransition } = useTransition()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const [isMuted, setIsMuted] = useState(() => {
-    // localStorage is the most reliable source — toggleAudio always writes here
-    try {
-      const stored = localStorage.getItem('fh_audio_muted')
-      if (stored !== null) return stored === 'true'
-    } catch {}
-
-    // Fall back to live audio state if available
-    if (audioRef?.current && !audioRef.current.paused) return false
-
-    // Fall back to the global ref
-    const isUserMutedRef = (window as any).__isUserMutedRef
-    if (isUserMutedRef !== undefined) return isUserMutedRef.current
-
-    // Unknown — assume muted until audio starts
-    return true
-  })
-
-  // Sync icon with audio state. Audio may be initialized after mount, so we
-  // poll until the element is ready rather than bailing out early.
-  useEffect(() => {
-    let attached = false
-
-    const updateMutedState = () => {
-      const audio = audioRef?.current
-      const isUserMutedRef = (window as any).__isUserMutedRef
-
-      // isUserMutedRef is the authoritative manual-mute flag
-      if (isUserMutedRef?.current === true) { setIsMuted(true); return }
-
-      // localStorage as fallback when __isUserMutedRef isn't set up yet
-      // (prevents the interval from flipping the icon back after a gain-only mute)
-      try {
-        const stored = localStorage.getItem('fh_audio_muted')
-        if (stored === 'true') { setIsMuted(true); return }
-      } catch {}
-
-      // Finally, mirror the actual play/pause state
-      if (audio) setIsMuted(audio.paused)
-    }
-
-    const tryAttach = () => {
-      const audio = audioRef?.current
-      if (!audio || attached) return
-      attached = true
-      audio.addEventListener('play', updateMutedState)
-      audio.addEventListener('pause', updateMutedState)
-    }
-
-    // Try immediately, then keep polling until audio element is ready
-    tryAttach()
-    updateMutedState()
-    const interval = setInterval(() => { tryAttach(); updateMutedState() }, 500)
-
-    return () => {
-      clearInterval(interval)
-      const audio = audioRef?.current
-      if (audio && attached) {
-        audio.removeEventListener('play', updateMutedState)
-        audio.removeEventListener('pause', updateMutedState)
-      }
-    }
-  }, [audioRef])
-
   const handleMenuToggle = () => {
     const newState = !isMenuOpen
     setIsMenuOpen(newState)
     onMenuChange?.(newState)
-  }
-
-  const toggleAudio = () => {
-    if (audioRef?.current) {
-      const gainNodeRef = (window as any).__gainNodeRef
-      const gain2NodeRef = (window as any).__gain2NodeRef
-      const isUserMutedRef = (window as any).__isUserMutedRef
-      const audioContext = (window as any).__audioContext
-      const isMapPage = window.location.pathname === '/'
-
-      if (isMuted) {
-        // UNMUTING - volumes depend on current page
-
-        // Resume AudioContext if suspended (required after direct navigation)
-        if (audioContext && audioContext.state === 'suspended') {
-          audioContext.resume().then(() => {
-            // console.log('✅ AudioContext resumed from NavBar toggle')
-          })
-        }
-
-        // Audio 1 (music): Always goes to 0.5 when unmuting
-        if (gainNodeRef?.current && audioContext) {
-          gainNodeRef.current.gain.setTargetAtTime(0.5, audioContext.currentTime, 0.3)
-        }
-
-        // Audio 2 (ambience): 0.5 on map page, 0 on other pages
-        if (gain2NodeRef?.current && audioContext) {
-          const targetVolume = isMapPage ? 0.5 : 0
-          gain2NodeRef.current.gain.setTargetAtTime(targetVolume, audioContext.currentTime, 0.3)
-        }
-
-        // Ensure audio is playing
-        if (audioRef.current.paused) {
-          audioRef.current.play().catch(err => console.error('Audio play failed:', err))
-        }
-        if (audio2Ref?.current && audio2Ref.current.paused) {
-          audio2Ref.current.play().catch(err => console.error('Audio2 play failed:', err))
-        }
-
-        // Update mute state
-        if (isUserMutedRef) {
-          isUserMutedRef.current = false
-        }
-        // Save preference to localStorage
-        try {
-          localStorage.setItem('fh_audio_muted', 'false')
-        } catch (err) {
-          console.error('Failed to save audio preference:', err)
-        }
-        setIsMuted(false)
-
-        // console.log(`🔊 Audio unmuted on ${isMapPage ? 'map' : 'non-map'} page: music=0.5, ambience=${isMapPage ? '0.5' : '0'}`)
-      } else {
-        // MUTING - both tracks go to 0 regardless of page
-
-        if (gainNodeRef?.current && audioContext) {
-          gainNodeRef.current.gain.setTargetAtTime(0, audioContext.currentTime, 0.3)
-        }
-        if (gain2NodeRef?.current && audioContext) {
-          gain2NodeRef.current.gain.setTargetAtTime(0, audioContext.currentTime, 0.3)
-        }
-
-        // Update mute state
-        if (isUserMutedRef) {
-          isUserMutedRef.current = true
-        }
-        // Save preference to localStorage
-        try {
-          localStorage.setItem('fh_audio_muted', 'true')
-        } catch (err) {
-          console.error('Failed to save audio preference:', err)
-        }
-        setIsMuted(true)
-
-        // console.log('🔇 Audio muted: music=0, ambience=0')
-      }
-    }
   }
 
   const logoSrc = logoColor === 'light' 
@@ -217,42 +72,6 @@ export const NavBar = ({
 
         {/* Right side controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-          {/* Sound Toggle */}
-          {audioRef && (
-            <button
-              className="navbar-sound-toggle"
-              onClick={toggleAudio}
-              aria-label={isMuted ? 'Unmute sound' : 'Mute sound'}
-              style={{
-                opacity,
-                transition: 'opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1)',
-                pointerEvents: opacity > 0 ? 'auto' : 'none'
-              }}
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path
-                  d="M11 5L6 9H2v6h4l5 4V5z"
-                  stroke={hamburgerColor}
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  fill="none"
-                />
-                {!isMuted ? (
-                  <>
-                    <path d="M15.54 8.46a5 5 0 0 1 0 7.07" stroke={hamburgerColor} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                    <path d="M18.07 5.93a9 9 0 0 1 0 12.73" stroke={hamburgerColor} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </>
-                ) : (
-                  <>
-                    <line x1="16" y1="9" x2="22" y2="15" stroke={hamburgerColor} strokeWidth="1.5" strokeLinecap="round" />
-                    <line x1="22" y1="9" x2="16" y2="15" stroke={hamburgerColor} strokeWidth="1.5" strokeLinecap="round" />
-                  </>
-                )}
-              </svg>
-            </button>
-          )}
-
           {/* Hamburger Menu */}
           <div 
             className="navbar-hamburger"

@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { clampToMapBounds } from '../constants/mapBoundaries'
+import { FOUNDERS_HOUSE_SCREEN_POS } from '../constants/poi'
 
 function easeOutQuart(t: number): number {
   return 1 - Math.pow(1 - t, 4)
@@ -40,7 +41,9 @@ export class HelsinkiCameraController {
   private horizontalDragEnabled: boolean = true
   private isDragging: boolean = false
   private panSensitivity: number = 0.28
-  private rotateSensitivity: number = 0.0012
+  private rotateSensitivity: number = 0.0025
+  // Dragging revolves the camera around this point (Founders House)
+  private orbitPivot: THREE.Vector3 = FOUNDERS_HOUSE_SCREEN_POS.clone()
   private velocity: THREE.Vector3 = new THREE.Vector3()
   private rotationVelocity: number = 0
   private friction: number = 0.96
@@ -217,14 +220,28 @@ export class HelsinkiCameraController {
   private lastMouseX: number = 0
   private lastMouseY: number = 0
   
-  // Store direction vectors for momentum continuation
-  private lastForward: THREE.Vector3 = new THREE.Vector3()
+  /**
+   * Revolve the camera rig around the vertical axis through the orbit pivot.
+   * Camera and look target rotate together, so the framing of the pivot stays the same.
+   */
+  private revolveAroundPivot(angle: number): void {
+    if (!this.orbit) return
+    const cos = Math.cos(angle)
+    const sin = Math.sin(angle)
+    const points = [this.camera.position, this.baseCameraPosition, this.cameraTargetPosition, this.orbit.target]
+    for (const point of points) {
+      const dx = point.x - this.orbitPivot.x
+      const dz = point.z - this.orbitPivot.z
+      point.x = this.orbitPivot.x + dx * cos + dz * sin
+      point.z = this.orbitPivot.z - dx * sin + dz * cos
+    }
+    this.target.copy(this.orbit.target)
+    this.camera.lookAt(this.orbit.target)
+  }
 
   /**
-   * Handle hybrid drag: horizontal = rotate, vertical = pan
-   * - Left/right drag rotates around the target (orbiting)
-   * - Up/down drag pans forward/backward
-   * Both have smooth momentum/easing
+   * Handle drag: horizontal movement revolves the camera around the orbit pivot.
+   * Vertical movement does nothing. Rotation has smooth momentum/easing.
    */
   private handlePointerMoveWithEasing = (event: PointerEvent): void => {
     if (!this.orbit) return;
@@ -233,67 +250,10 @@ export class HelsinkiCameraController {
     this.lastMouseX = event.clientX;
     this.lastMouseY = event.clientY;
     if (this.isDragging && event.buttons === 1 && this.horizontalDragEnabled) {
-      // Get camera direction vectors for panning (reuse temp vectors)
-      this.camera.getWorldDirection(this._tempVector3)
-
-      // Get the forward vector (camera direction projected onto XZ plane, reuse vector)
-      this._tempVector3_2.set(this._tempVector3.x, 0, this._tempVector3.z).normalize()
-
-      // Store for momentum continuation
-      this.lastForward.copy(this._tempVector3_2)
-      
-      // === ROTATION (horizontal drag) ===
-      // Calculate target rotation velocity
-      // Positive deltaX (drag right) should rotate clockwise (negative angle around Y)
-      let rotationEasing = 1.0
-      let panEasing = 1.0
-      if (this.boundingBox) {
-        // Easing for rotation: slow down as camera approaches bounding box edge (X/Z)
-        const margin = 40 // units for soft edge
-        const box = this.boundingBox
-        // For X axis
-        const distToMinX = Math.abs(this.camera.position.x - box.min.x)
-        const distToMaxX = Math.abs(this.camera.position.x - box.max.x)
-        const tX = Math.min(distToMinX, distToMaxX) / margin
-        // For Z axis
-        const distToMinZ = Math.abs(this.camera.position.z - box.min.z)
-        const distToMaxZ = Math.abs(this.camera.position.z - box.max.z)
-        const tZ = Math.min(distToMinZ, distToMaxZ) / margin
-        // Use the minimum t for strongest edge effect
-        const t = Math.max(0, Math.min(1, Math.min(tX, tZ)))
-        panEasing = easeOutQuart(t)
-        rotationEasing = easeOutQuart(t)
-      }
-
-      // Apply easing to rotation and pan
-      const targetRotationVelocity = deltaX * this.rotateSensitivity * rotationEasing
+      // Drag right moves the camera to its left, so the scene follows the pointer
+      const targetRotationVelocity = -deltaX * this.rotateSensitivity
       this.rotationVelocity = this.rotationVelocity + (targetRotationVelocity - this.rotationVelocity) * this.smoothingFactor
-
-      // Rotate camera in place - pivot around camera position, not target (reuse vectors)
-      this._tempVector3_3.copy(this.orbit.target).sub(this.camera.position)
-      this._tempVector3.set(0, 1, 0)
-      this._tempVector3_3.applyAxisAngle(this._tempVector3, this.rotationVelocity)
-      this.orbit.target.copy(this.camera.position).add(this._tempVector3_3)
-      this.target.copy(this.orbit.target)
-      this.camera.lookAt(this.orbit.target)
-
-      // === PAN (vertical drag) ===
-      const targetPanZ = deltaY * this.panSensitivity * panEasing
-      // Reuse temp vector for target velocity
-      this._tempVector3.set(0, 0, 0)
-      // Only move along the XZ plane (no Y/height adjustment, reuse _tempVector3_2 as forward)
-      this._tempVector3_2.setY(0).normalize()
-      this._tempVector3.addScaledVector(this._tempVector3_2, targetPanZ)
-      this.velocity.lerp(this._tempVector3, this.smoothingFactor)
-      this.dragTargetPosition.add(this.velocity)
-      this.orbit.target.add(this.velocity)
-      this.target.copy(this.orbit.target)
-      
-      // Update base position during drag (without parallax)
-      this.baseCameraPosition.add(this.velocity)
-
-      // Clamp camera position to map boundaries
-      this.clampToMapBoundaries()
+      this.revolveAroundPivot(this.rotationVelocity)
     } else if (event.buttons > 0 && this.softBoundaryEnabled) {
       // Apply boundary easing for other controls
       this.applyBoundaryEasing(deltaX, deltaY, 0)
@@ -303,24 +263,14 @@ export class HelsinkiCameraController {
   /**
    * Apply momentum/inertia - call this in the update loop
    * Continues movement after drag release with smooth deceleration
-   * Handles both pan momentum and rotation momentum
+   * Handles rotation momentum around the orbit pivot (and any handoff pan velocity)
    */
   public applyMomentum(): void {
     if (!this.orbit || this.isDragging) return
 
     // === ROTATION MOMENTUM ===
     if (Math.abs(this.rotationVelocity) > this.rotationThreshold) {
-      // Rotate camera in place - pivot around camera position, not target
-      // Get offset from camera to target
-      const offsetToTarget = this.orbit.target.clone().sub(this.camera.position)
-
-      // Rotate the target around the camera (Y axis)
-      offsetToTarget.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.rotationVelocity)
-
-      // Apply new target position (camera stays in place)
-      this.orbit.target.copy(this.camera.position).add(offsetToTarget)
-      this.target.copy(this.orbit.target)
-      this.camera.lookAt(this.orbit.target)
+      this.revolveAroundPivot(this.rotationVelocity)
 
       // Apply friction to rotation
       this.rotationVelocity *= this.friction

@@ -7,11 +7,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import FloatingParticlesOverlay from './FloatingParticlesOverlay'
 import { HelsinkiScene } from '../../core'
 import { motion } from 'framer-motion'
-import type { PointOfInterest } from '../../constants/poi'
-import { POINTS_OF_INTEREST } from '../../constants/poi'
-import { POINavigator } from './POINavigator'
 import POILayer from './POILayer'
-import { POIInfoBox } from './POIInfoBox'
 import { Button } from '../ui'
 import { NavBar } from '../layout'
 import { useTransition } from '../transitions/TransitionContext'
@@ -32,8 +28,6 @@ interface HelsinkiViewerProps {
   showUI?: boolean
   staticMode?: boolean; // disables drag/zoom/pan, enables only mouse-move camera
   environmentColor?: string; // custom background/environment color
-  audioRef?: React.MutableRefObject<HTMLAudioElement | null>
-  audio2Ref?: React.MutableRefObject<HTMLAudioElement | null>
 }
 
 export const HelsinkiViewer = ({
@@ -43,8 +37,6 @@ export const HelsinkiViewer = ({
   onMapLoadingChange,
   staticMode = false,
   environmentColor,
-  audioRef,
-  audio2Ref,
 }: HelsinkiViewerProps) => {
   const { navigateWithTransition } = useTransition()
   const containerRef = useRef<HTMLDivElement>(null)
@@ -77,13 +69,7 @@ export const HelsinkiViewer = ({
   const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 })
   const targetCursorPosition = useRef({ x: 0, y: 0 })
   const [showDragIndicator, setShowDragIndicator] = useState(true)
-  const [activePOIKey, setActivePOIKey] = useState<string | null>('FOUNDERS_HOUSE')
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
-  const [selectedPOIInfo, setSelectedPOIInfo] = useState<PointOfInterest | null>(null)
-  const poiInfoBoxRef = useRef<HTMLDivElement>(null)
-
-  const [showExploreHint, setShowExploreHint] = useState(false)
-  const hintDismissedRef = useRef(false)
 
   const hasInteractedRef = useRef(false)
   const [isTransitionActive, setIsTransitionActive] = useState(false)
@@ -151,7 +137,7 @@ export const HelsinkiViewer = ({
        targetCursorPosition.current = { x: e.clientX, y: e.clientY }
       const target = document.elementFromPoint(e.clientX, e.clientY)
       const isInteractive = !!target?.closest(
-        'a, button, .clickable, .navbar, .navbar-hamburger, .navbar-logo-container, .poi-navigator-wrapper, .full-screen-menu, .poi-info-box'
+        'a, button, .clickable, .navbar, .navbar-hamburger, .navbar-logo-container, .full-screen-menu'
       )
       if (isInteractive !== hoveringInteractiveRef.current) {
         hoveringInteractiveRef.current = isInteractive
@@ -234,34 +220,6 @@ export const HelsinkiViewer = ({
       if (fadeTimers.current.hero) clearTimeout(fadeTimers.current.hero)
     }
   }, [scrollProgress])
-
-  // Cycling explore hint: fade in after 5s, show for duration, hide, repeat
-  useEffect(() => {
-    if (!showUIState) {
-      setShowExploreHint(false)
-      return
-    }
-
-    hintDismissedRef.current = false
-    const timeouts: ReturnType<typeof setTimeout>[] = []
-
-    const cycle = (initialDelay: number) => {
-      const t1 = setTimeout(() => {
-        if (hintDismissedRef.current) return
-        setShowExploreHint(true)
-        const t2 = setTimeout(() => {
-          setShowExploreHint(false)
-          if (!hintDismissedRef.current) cycle(20000)
-        }, 10000)
-        timeouts.push(t2)
-      }, initialDelay)
-      timeouts.push(t1)
-    }
-
-    cycle(5000)
-
-    return () => timeouts.forEach(clearTimeout)
-  }, [showUIState])
 
   const isDemoNightMode = false
 
@@ -361,13 +319,6 @@ export const HelsinkiViewer = ({
     let lastMouseX = 0
     let lastMouseY = 0
 
-    const dismissHint = () => {
-      if (!hintDismissedRef.current) {
-        hintDismissedRef.current = true
-        setShowExploreHint(false)
-      }
-    }
-
     const handleMouseInteraction = (event: MouseEvent) => {
       if (event.type === 'mousemove') {
         if (event.clientX === lastMouseX && event.clientY === lastMouseY) {
@@ -375,8 +326,6 @@ export const HelsinkiViewer = ({
         }
         lastMouseX = event.clientX
         lastMouseY = event.clientY
-      } else {
-        dismissHint()
       }
 
       lastInteractionTime.current = Date.now()
@@ -388,7 +337,6 @@ export const HelsinkiViewer = ({
     }
 
     const handleTouchInteraction = () => {
-      dismissHint()
       lastInteractionTime.current = Date.now()
 
       if (!hasInteractedRef.current) {
@@ -398,7 +346,6 @@ export const HelsinkiViewer = ({
     }
 
     const handleWheelInteraction = () => {
-      dismissHint()
       lastInteractionTime.current = Date.now()
 
       if (!hasInteractedRef.current) {
@@ -486,59 +433,14 @@ export const HelsinkiViewer = ({
     return () => clearTimeout(failsafeTimer)
   }, [loading])
 
-  // Click-outside and touch handler for POI info box
-  useEffect(() => {
-    if (!selectedPOIInfo) return
-
-    const handleInteractionOutside = (event: MouseEvent | TouchEvent) => {
-      const target = event.target as HTMLElement
-
-      // Check if interaction is outside the info box
-      const isOutsideInfoBox = poiInfoBoxRef.current && !poiInfoBoxRef.current.contains(target)
-
-      // Check if interaction is on a POI button (allow POI clicks to handle themselves)
-      const isOnPOIButton = target.closest('.poi-item, .poi-fan-item, .poi-fan-lead, .poi-layer-item')
-
-      if (isOutsideInfoBox && !isOnPOIButton) {
-        setSelectedPOIInfo(null)
-      }
-    }
-
-    // Add listener after a short delay to prevent immediate closing
-    const timeoutId = setTimeout(() => {
-      document.addEventListener('mousedown', handleInteractionOutside)
-      document.addEventListener('touchstart', handleInteractionOutside)
-    }, 100)
-
-    return () => {
-      clearTimeout(timeoutId)
-      document.removeEventListener('mousedown', handleInteractionOutside)
-      document.removeEventListener('touchstart', handleInteractionOutside)
-    }
-  }, [selectedPOIInfo])
-
-  const handlePOISelect = (poi: PointOfInterest) => {
+  const handleFoundersHouseSelect = () => {
     if (sceneRef.current && (sceneRef.current as any).focusPOI) {
-      const poiKey = Object.entries(POINTS_OF_INTEREST).find(
-        ([_, poiObj]) => poiObj.id === poi.id
-      )?.[0]
+      setIsCameraFlying(true)
+      ;(sceneRef.current as any).focusPOI('FOUNDERS_HOUSE')
 
-      if (poiKey) {
-        setActivePOIKey(poiKey)
-        setIsCameraFlying(true)
-        ;(sceneRef.current as any).focusPOI(poiKey)
-
-        // Show info box for all POIs except Founders House
-        if (poiKey !== 'FOUNDERS_HOUSE') {
-          setSelectedPOIInfo(poi)
-        } else {
-          setSelectedPOIInfo(null)
-        }
-
-        setTimeout(() => {
-          setIsCameraFlying(false)
-        }, 3700)
-      }
+      setTimeout(() => {
+        setIsCameraFlying(false)
+      }, 3700)
     }
   }
 
@@ -552,9 +454,9 @@ export const HelsinkiViewer = ({
         <POILayer
           sceneRef={sceneRef}
           visible={scrollProgress >= 1}
-          activePOIKey={activePOIKey}
+          activePOIKey="FOUNDERS_HOUSE"
           isCameraFlying={isCameraFlying}
-          onPOISelect={handlePOISelect}
+          onPOISelect={handleFoundersHouseSelect}
         />
       </div>
 
@@ -564,8 +466,6 @@ export const HelsinkiViewer = ({
         hamburgerColor={isMenuOpen ? "#FFF8F2" : "#D82E11"}
         opacity={showNavBar && !isTransitionActive ? 1 : 0}
         onMenuChange={setIsMenuOpen}
-        audioRef={audioRef}
-        audio2Ref={audio2Ref}
       />
       <div
         className="ui-overlay"
@@ -669,21 +569,6 @@ export const HelsinkiViewer = ({
         </div>
       </div>
 
-      {showUIState && (
-        <motion.div 
-          className="poi-navigator-wrapper"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ 
-            delay: 0,
-            duration: 0.4,
-            ease: [0.22, 1, 0.36, 1]
-          }}
-        > 
-          <POINavigator onPOISelect={handlePOISelect} initialPOI="FOUNDERS_HOUSE" />
-        </motion.div>
-      )}
-
       {scrollProgress >= 1 && (
 
        <motion.div
@@ -699,35 +584,6 @@ export const HelsinkiViewer = ({
           <img src="/assets/icons/mapdragicon.svg" alt="Drag to explore" className="cursor-icon" />
         </motion.div>
       )}
-
-      <div
-        className="explore-hint"
-        style={{
-          position: 'fixed',
-          top: '5vh',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          opacity: showExploreHint ? 1 : 0,
-          transition: 'opacity 0.8s ease',
-          fontFamily: "'IBM Plex Sans', sans-serif",
-          fontWeight: 300,
-          color: '#797979',
-          fontSize: '0.8rem',
-          letterSpacing: '0em',
-          pointerEvents: 'none',
-          whiteSpace: 'nowrap',
-          zIndex: 100,
-        }}
-      >
-        Drag around to explore Finland's Startup Scene
-      </div>
-
-      <div ref={poiInfoBoxRef}>
-        <POIInfoBox
-          poi={selectedPOIInfo}
-          onClose={() => setSelectedPOIInfo(null)}
-        />
-      </div>
     </>
   )
 }

@@ -33,11 +33,14 @@ const POILayer = ({
 
   const poiList = useMemo(
     () =>
-      Object.entries(POINTS_OF_INTEREST).map(([key, poi]) => ({
-        key,
-        poi,
-        label: getDisplayName(poi),
-      })),
+      // Only the Founders House marker is shown on the map
+      Object.entries(POINTS_OF_INTEREST)
+        .filter(([key]) => key === 'FOUNDERS_HOUSE')
+        .map(([key, poi]) => ({
+          key,
+          poi,
+          label: getDisplayName(poi),
+        })),
     []
   )
 

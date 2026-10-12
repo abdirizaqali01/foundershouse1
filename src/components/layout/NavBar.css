@@ -36,37 +36,6 @@
   gap: 1.5rem;
 }
 
-/* Sound Toggle - Left of Hamburger */
-.navbar-sound-toggle {
-  cursor: pointer;
-  z-index: 10002;
-  padding: 0;
-  background: transparent;
-  border: none;
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  will-change: opacity;
-  backface-visibility: hidden;
-  transform: translateZ(0);
-  user-select: none !important;
-  -webkit-user-select: none !important;
-  pointer-events: auto;
-  flex-shrink: 0;
-}
-
-.navbar-sound-toggle:hover {
-  opacity: 0.6;
-  transition: opacity 0.3s ease;
-}
-
-.navbar-sound-toggle svg {
-  width: 24px;
-  height: 24px;
-}
-
 /* Hamburger Menu - Right */
 .navbar-hamburger {
   cursor: pointer;

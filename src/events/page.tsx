@@ -83,7 +83,7 @@ const shuffleText = (
   return () => clearInterval(interval);
 };
 
-export default function EventsPage({ audioRef, audio2Ref }: { audioRef?: React.MutableRefObject<HTMLAudioElement | null>, audio2Ref?: React.MutableRefObject<HTMLAudioElement | null> }) {
+export default function EventsPage() {
   const [stage, setStage] = useState(1);
   const [showNavBar, setShowNavBar] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -564,8 +564,6 @@ export default function EventsPage({ audioRef, audio2Ref }: { audioRef?: React.M
         hamburgerColor="#FFF8F2" 
         streakColor="rgba(216, 46, 17, 1)" 
         opacity={showNavBar ? 1 : 0} 
-        audioRef={audioRef} 
-        audio2Ref={audio2Ref}
         onMenuChange={setIsMenuOpen}
       />
 

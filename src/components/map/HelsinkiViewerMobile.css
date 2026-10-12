@@ -1,9 +1,4 @@
 @media (max-width: 768px) {
-  /* Explore Hint */
-  .explore-hint {
-    display: none;
-  }
-
   .hero-text-container {
     align-items: flex-start;
     justify-content: flex-start;

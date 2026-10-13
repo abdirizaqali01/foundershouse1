@@ -3,15 +3,12 @@
  * Three.js scene setup with Helsinki GLB model (baked textures) and post-processing effects
  */
 import * as THREE from 'three'
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
-import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
 import HelsinkiCameraController from './HelsinkiCameraController'
-import { loadDualModels } from '../loaders'
-import { setupPostProcessing, setupComposer, setupSceneLighting } from '../rendering'
+import { loadDualModels, createGLTFLoader } from '../loaders'
+import { setupSceneLighting } from '../rendering'
 import { setupSceneFog, updateFogColor } from '../effects'
 import { createSmoothPOIAnimation, updateSmoothPOIAnimation, interruptSmoothPOIAnimation, type SmoothPOIAnimation } from '../animation'
 import {
-  PerlinNoiseGenerator,
   applyCameraConfig,
   getCurrentCameraConfig,
   CAMERA_PRESETS,
@@ -19,8 +16,8 @@ import {
   createCamera,
   createRenderer,
   configureCameraControls,
-  createRenderTarget,
   handleResize,
+  getMapModelPath,
   setupClickHandler
 } from '../helpers'
 import { AutoTourManager, POIHighlightManager, FoundersHouseMarker } from './managers'
@@ -35,6 +32,8 @@ export interface SceneConfig {
   isNightMode?: boolean
   onLoadProgress?: (progress: number) => void
   onLoadComplete?: () => void
+  onLoadError?: (error: unknown) => void
+  onContextLost?: () => void
   staticMode?: boolean
   environmentColor?: string
   enableAutoCentering?: boolean
@@ -47,10 +46,6 @@ export class HelsinkiScene {
   private renderer: THREE.WebGLRenderer
   private controls: HelsinkiCameraController
   private helsinkiModel: THREE.Group | null = null
-  private perlinTexture: THREE.DataTexture
-  private postProcessMaterial: THREE.ShaderMaterial
-  private composer: any | null = null
-  private renderTarget: THREE.WebGLRenderTarget
   private clock: THREE.Clock
   private container: HTMLElement
   private isNightMode: boolean
@@ -81,9 +76,9 @@ export class HelsinkiScene {
     endHeight: number
   } | null = null
 
-  // Separate renderer and scene for sähkötalo (renders without greyscale)
-  private sahkotaloRenderer: THREE.WebGLRenderer | null = null
-  private sahkotaloScene: THREE.Scene | null = null
+  private contextLost: boolean = false
+  private disposed: boolean = false
+  private onContextLost?: () => void
 
   private particleGroup: THREE.Group | null = null
   private particles: Array<{ mesh: THREE.Mesh, swayPhase: number }> = []
@@ -109,27 +104,9 @@ export class HelsinkiScene {
     this.camera = createCamera()
     this.renderer = createRenderer(config.container)
 
-    // Create second renderer for sähkötalo (full color, no greyscale)
-    const isMobile = typeof window !== 'undefined' && window.innerWidth <= 1024;
-    this.sahkotaloRenderer = new THREE.WebGLRenderer({
-      alpha: true,
-      antialias: !isMobile, // Disable antialias on mobile for performance
-      powerPreference: 'high-performance'
-    })
-    // Use window dimensions (not container) to match main renderer and camera aspect ratio
-    this.sahkotaloRenderer.setSize(window.innerWidth, window.innerHeight)
-    // Mobile devices: limit to 1.25x pixel ratio to prevent memory overflow
-    const maxPixelRatio = isMobile ? 1.25 : 2;
-    this.sahkotaloRenderer.setPixelRatio(Math.min(window.devicePixelRatio, maxPixelRatio))
-    this.sahkotaloRenderer.domElement.classList.add('sahkotalo-canvas')
-    this.sahkotaloRenderer.domElement.style.position = 'absolute'
-    this.sahkotaloRenderer.domElement.style.pointerEvents = 'none'
-    config.container.appendChild(this.sahkotaloRenderer.domElement)
-
-    // Create separate scene for sähkötalo (transparent background)
-    this.sahkotaloScene = new THREE.Scene()
-    // Add same lighting to sähkötalo scene
-    setupSceneLighting(this.sahkotaloScene)
+    this.onContextLost = config.onContextLost
+    this.renderer.domElement.addEventListener('webglcontextlost', this.handleContextLost, false)
+    this.renderer.domElement.addEventListener('webglcontextrestored', this.handleContextRestored, false)
 
     this.controls = new HelsinkiCameraController(this.camera, this.renderer.domElement, config.staticMode)
     if (!config.staticMode) {
@@ -138,14 +115,6 @@ export class HelsinkiScene {
       this.originalMinPolarAngle = this.controls.minPolarAngle
       this.originalMaxPolarAngle = this.controls.maxPolarAngle
     }
-    this.renderTarget = createRenderTarget()
-    this.perlinTexture = this.generatePerlinTexture()
-
-    const { material: ppMaterial } = setupPostProcessing(this.renderTarget)
-    this.postProcessMaterial = ppMaterial
-    const composerResult = setupComposer(this.renderer, this.scene, this.camera, this.postProcessMaterial)
-    this.composer = composerResult.composer
-
     setupSceneLighting(this.scene)
     this.fog = setupSceneFog(this.scene, this.isNightMode)
     this.poiHighlightManager = new POIHighlightManager()
@@ -161,7 +130,7 @@ export class HelsinkiScene {
     this.createBoundaryWireframe()
 
     loadDualModels({
-      mainMapPath: '/models/fh.glb',
+      mainMapPath: getMapModelPath(),
       scene: this.scene,
       camera: this.camera,
       controls: this.controls,
@@ -170,6 +139,11 @@ export class HelsinkiScene {
       onLoadComplete: config.onLoadComplete,
       renderer: this.renderer,
     }).then((result) => {
+      if (this.disposed) {
+        // Scene was torn down while the model was still loading: don't resurrect it
+        this.scene.remove(result.mainMap)
+        return
+      }
       this.helsinkiModel = result.mainMap
       // Wire up the actual model AABB as camera boundaries (replaces static MAP_BOUNDARIES)
       const modelBox = new THREE.Box3().setFromObject(this.helsinkiModel)
@@ -178,7 +152,10 @@ export class HelsinkiScene {
       // Create particles after model loads
       this.createFloatingParticles();
       // console.log('createFloatingParticles called:', this.particles.length, 'particles');
-    }).catch(() => {
+    }).catch((error) => {
+      if (this.disposed) return
+      // Surface the failure so the UI can continue instead of hanging on the loading screen
+      config.onLoadError?.(error)
     })
 
     this._cleanupClickHandler = setupClickHandler(this.renderer, this.camera, () => this.helsinkiModel)
@@ -206,37 +183,19 @@ export class HelsinkiScene {
     this.scene.add(wireframe)
   }
 
-  private generatePerlinTexture(): THREE.DataTexture {
-    const generator = new PerlinNoiseGenerator(512)
-    const data = generator.generate()
+  private handleContextLost = (event: Event): void => {
+    // Without preventDefault the browser never restores the context
+    event.preventDefault()
+    this.contextLost = true
+    this.onContextLost?.()
+  }
 
-    const texture = new THREE.DataTexture(data, 512, 512, THREE.RedFormat)
-    texture.wrapS = THREE.RepeatWrapping
-    texture.wrapT = THREE.RepeatWrapping
-    texture.needsUpdate = true
-
-    return texture
+  private handleContextRestored = (): void => {
+    this.contextLost = false
   }
 
   private onWindowResize = (): void => {
-    handleResize(
-      this.camera,
-      this.renderer,
-      this.renderTarget,
-      this.postProcessMaterial,
-      this.composer
-    )
-
-    // Also resize sähkötalo renderer - use window dimensions to match main renderer
-    if (this.sahkotaloRenderer) {
-      const width = window.innerWidth
-      const height = window.innerHeight
-      this.sahkotaloRenderer.setSize(width, height)
-      // Apply same mobile pixel ratio cap as initial setup to prevent memory pressure on resize/rotation
-      const isMobile = typeof window !== 'undefined' && window.innerWidth <= 1024;
-      const maxPixelRatio = isMobile ? 1.25 : 2;
-      this.sahkotaloRenderer.setPixelRatio(Math.min(window.devicePixelRatio, maxPixelRatio))
-    }
+    handleResize(this.camera, this.renderer)
   }
 
   private _handlePointerDown = (ev: PointerEvent) => {
@@ -488,17 +447,8 @@ export class HelsinkiScene {
     // Animate floating particles with wind-like motion
     this.updateFloatingParticles(elapsed)
 
-    if (this.composer) {
-      this.composer.render()
-    } else {
-      this.renderer.setRenderTarget(null)
-      this.renderer.render(this.scene, this.camera)
-    }
-
-    // Render sähkötalo on separate canvas (no greyscale)
-    if (this.sahkotaloRenderer && this.sahkotaloScene) {
-      this.sahkotaloRenderer.render(this.sahkotaloScene, this.camera)
-    }
+    if (this.contextLost) return
+    this.renderer.render(this.scene, this.camera)
   }
 
   /**
@@ -646,6 +596,7 @@ export class HelsinkiScene {
   }
 
   public dispose(): void {
+    this.disposed = true
     this.autoTourManager.dispose()
     this.poiHighlightManager.dispose()
     this.foundersHouseMarker.dispose()
@@ -658,33 +609,38 @@ export class HelsinkiScene {
     }
 
     this.controls.dispose()
-    this.renderer.dispose()
-    this.renderTarget.dispose()
-    this.perlinTexture.dispose()
 
-    if (this.postProcessMaterial) {
-      this.postProcessMaterial.dispose()
-    }
-    if (this.composer) {
-      this.composer.dispose()
-    }
+    this.renderer.domElement.removeEventListener('webglcontextlost', this.handleContextLost)
+    this.renderer.domElement.removeEventListener('webglcontextrestored', this.handleContextRestored)
 
     if (this.helsinkiModel) {
       this.scene.remove(this.helsinkiModel)
+      // Free GPU memory (geometry, textures, materials) so repeated mounts don't leak VRAM
+      this.helsinkiModel.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          child.geometry?.dispose()
+          const mats = Array.isArray(child.material) ? child.material : [child.material]
+          mats.forEach((mat: any) => {
+            if (!mat) return
+            for (const key of ['map', 'emissiveMap', 'normalMap', 'aoMap', 'roughnessMap', 'metalnessMap']) {
+              mat[key]?.dispose?.()
+            }
+            mat.dispose()
+          })
+        }
+      })
+      this.helsinkiModel = null
     }
     this.disposeFoundersHouseOverlay()
+    this.disposeParticles()
 
-    // Dispose sähkötalo renderer
-    if (this.sahkotaloRenderer) {
-      this.sahkotaloRenderer.dispose()
-      if (this.sahkotaloRenderer.domElement.parentNode) {
-        this.sahkotaloRenderer.domElement.parentNode.removeChild(this.sahkotaloRenderer.domElement)
-      }
-      this.sahkotaloRenderer = null
+    // Release the WebGL context immediately rather than waiting for GC
+    this.renderer.dispose()
+    this.renderer.forceContextLoss()
+
+    if (this.renderer.domElement.parentNode === this.container) {
+      this.container.removeChild(this.renderer.domElement)
     }
-    this.sahkotaloScene = null
-
-    this.container.removeChild(this.renderer.domElement)
   }
 
   public getCamera(): THREE.PerspectiveCamera {
@@ -702,16 +658,13 @@ export class HelsinkiScene {
   private loadFoundersHouseOverlay(): void {
     if (!this.helsinkiModel) return
 
-    const loader = new GLTFLoader()
-    const dracoLoader = new DRACOLoader()
-    dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/')
-    dracoLoader.setDecoderConfig({ type: 'js' })
-    loader.setDRACOLoader(dracoLoader)
+    const { loader, dispose: disposeLoader } = createGLTFLoader()
 
     const modelPath = '/models/sahkotalo.glb'
     loader.load(
       encodeURI(modelPath),
       (gltf) => {
+        disposeLoader()
         if (!this.helsinkiModel) return
 
         const overlay = gltf.scene
@@ -734,7 +687,8 @@ export class HelsinkiScene {
           polygonOffsetFactor: -2,
           polygonOffsetUnits: -2,
           depthWrite: true,
-          fog: true,
+          // Fog off: this used to render in a separate un-fogged scene, keep the same look
+          fog: false,
         })
 
         overlay.traverse((child) => {
@@ -752,13 +706,12 @@ export class HelsinkiScene {
 
         this.foundersHouseOverlay = overlay
         this.foundersHouseOverlayMaterial = redMaterial
-        // Add to separate scene so it renders without greyscale
-        if (this.sahkotaloScene) {
-          this.sahkotaloScene.add(overlay)
-        }
+        // Standard material (no grayscale patch), drawn after the map via renderOrder
+        this.scene.add(overlay)
       },
       undefined,
       () => {
+        disposeLoader()
         // Silent fail to avoid blocking scene if overlay can't load.
       }
     )
@@ -766,9 +719,7 @@ export class HelsinkiScene {
 
   private disposeFoundersHouseOverlay(): void {
     if (this.foundersHouseOverlay) {
-      if (this.sahkotaloScene) {
-        this.sahkotaloScene.remove(this.foundersHouseOverlay)
-      }
+      this.scene.remove(this.foundersHouseOverlay)
       this.foundersHouseOverlay.traverse((child) => {
         if (child instanceof THREE.Mesh) {
           child.geometry?.dispose()
@@ -1113,11 +1064,21 @@ export class HelsinkiScene {
     }
   }
 
+  private disposeParticles(): void {
+    if (this.particleGroup) {
+      this.scene.remove(this.particleGroup)
+      const first = this.particles[0]?.mesh
+      // All particles share one geometry and one material
+      first?.geometry.dispose()
+      ;(first?.material as THREE.Material | undefined)?.dispose()
+    }
+    this.particleGroup = null
+    this.particles = []
+  }
+
   private createFloatingParticles(): void {
     // Remove previous group if exists
-    if (this.particleGroup) {
-      this.scene.remove(this.particleGroup);
-    }
+    this.disposeParticles()
     this.particleGroup = new THREE.Group();
     this.particles = [];
     // Get map center from helsinkiModel
@@ -1138,15 +1099,16 @@ export class HelsinkiScene {
       // Set particle size to 1/2000th of map width
       const size = Math.min(mapWidth, mapDepth) / 2000;
       // console.log('Creating', count, 'particles at', centerX, centerZ, 'size', size);
+      // One shared geometry + material for every particle (was one of each per particle)
+      const geometry = new THREE.PlaneGeometry(size, size);
+      const material = new THREE.MeshBasicMaterial({
+        color: 0xbababa,
+        transparent: true,
+        opacity: 0.8,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+      });
       for (let i = 0; i < count; i++) {
-        const geometry = new THREE.PlaneGeometry(size, size);
-        const material = new THREE.MeshBasicMaterial({
-          color: 0xbababa,
-          transparent: true,
-          opacity: 0.8,
-          depthWrite: false,
-          side: THREE.DoubleSide,
-        });
         const mesh = new THREE.Mesh(geometry, material);
         // Spread particles randomly within map bounds
         const x = centerX + (Math.random() - 0.5) * mapWidth;

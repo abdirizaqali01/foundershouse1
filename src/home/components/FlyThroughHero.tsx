@@ -22,6 +22,9 @@ const CONFIG = {
   
   // Scroll distance (multiplier of viewport height)
   scrollDistance: 3,
+  // Phones/tablets: all hero animations are driven by scroll progress, so a shorter
+  // distance plays the same animation over less swiping (1.5 = half the desktop length)
+  scrollDistanceMobile: 1.5,
   
   // Text content - now pulled from homeContent
   heroText: [
@@ -851,7 +854,7 @@ return (
             style={{
             position: 'relative',
             backgroundColor: '#590D0F',
-            height: `${CONFIG.scrollDistance * 100}vh`,
+            height: `${(isMobileView ? CONFIG.scrollDistanceMobile : CONFIG.scrollDistance) * 100}vh`,
             touchAction: 'pan-y',
             }}
         />

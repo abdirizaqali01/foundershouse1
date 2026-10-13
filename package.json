@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "build:mobile-model": "node scripts/build-mobile-model.mjs"
   },
   "keywords": [
     "threejs",
@@ -31,10 +32,16 @@
     "three": "^0.181.2"
   },
   "devDependencies": {
+    "@gltf-transform/core": "^4.5.1",
+    "@gltf-transform/extensions": "^4.5.1",
+    "@gltf-transform/functions": "^4.5.1",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.6",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
+    "draco3dgltf": "^1.5.7",
+    "meshoptimizer": "^1.3.0",
+    "sharp": "^0.35.5",
     "typescript": "^5.9.3",
     "vite": "^7.2.4",
     "vite-plugin-pwa": "^1.2.0"

@@ -21,7 +21,8 @@ export {
 } from './cameraUtils'
 
 export {
-  detectPerformanceTier
+  detectPerformanceTier,
+  getMapModelPath
 } from './performanceDetector'
 
 export {
@@ -32,7 +33,6 @@ export {
   createCamera,
   createRenderer,
   configureCameraControls,
-  createRenderTarget,
   handleResize
 } from './sceneSetup'
 

@@ -101,60 +101,21 @@ export function configureCameraControls(controls: HelsinkiCameraController): voi
 }
 
 /**
- * Create a render target with capped pixel ratio for memory optimization
- * Full device pixel ratio can cause excessive memory usage on high DPI displays
- */
-export function createRenderTarget(): THREE.WebGLRenderTarget {
-  // Cap pixel ratio at 1.5 to prevent excessive memory usage
-  // On 2x displays: 2 -> 1.5 = 43% memory savings
-  // On 3x displays: 3 -> 1.5 = 75% memory savings
-  const cappedPixelRatio = Math.min(window.devicePixelRatio, 1.5)
-
-  return new THREE.WebGLRenderTarget(
-    window.innerWidth * cappedPixelRatio,
-    window.innerHeight * cappedPixelRatio
-  )
-}
-
-/**
- * Handle window resize for camera, renderer, and render target
+ * Handle window resize for camera and renderer
+ * Skips no-op resizes: on mobile, the URL bar collapsing fires resize events that would
+ * otherwise reallocate the full-screen drawing buffer for nothing.
  */
 export function handleResize(
   camera: THREE.PerspectiveCamera,
-  renderer: THREE.WebGLRenderer,
-  renderTarget: THREE.WebGLRenderTarget,
-  postProcessMaterial: THREE.ShaderMaterial,
-  composer: any | null
+  renderer: THREE.WebGLRenderer
 ): void {
-  camera.aspect = window.innerWidth / window.innerHeight
+  const width = window.innerWidth
+  const height = window.innerHeight
+
+  const size = renderer.getSize(new THREE.Vector2())
+  if (size.x === width && size.y === height) return
+
+  camera.aspect = width / height
   camera.updateProjectionMatrix()
-
-  renderer.setSize(window.innerWidth, window.innerHeight)
-
-  // Cap pixel ratio at 1.5 to prevent excessive memory usage
-  const cappedPixelRatio = Math.min(window.devicePixelRatio, 1.5)
-
-  // CRITICAL: Dispose old texture before resizing to prevent memory leak
-  // Without this, each resize orphans the old texture in VRAM (10-20 MB each)
-  renderTarget.dispose()
-
-  renderTarget.setSize(
-    window.innerWidth * cappedPixelRatio,
-    window.innerHeight * cappedPixelRatio
-  )
-
-  const resolutionUniform = postProcessMaterial.uniforms?.uResolution
-  if (resolutionUniform && resolutionUniform.value && typeof resolutionUniform.value.set === 'function') {
-    resolutionUniform.value.set(
-      window.innerWidth * cappedPixelRatio,
-      window.innerHeight * cappedPixelRatio
-    )
-  }
-
-  if (composer) {
-    composer.setSize(
-      window.innerWidth * cappedPixelRatio,
-      window.innerHeight * cappedPixelRatio
-    )
-  }
+  renderer.setSize(width, height)
 }

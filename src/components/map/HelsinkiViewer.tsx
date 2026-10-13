@@ -18,6 +18,8 @@ import ParallaxMotion from '../../effects/ParallaxMotion'
 interface MapLoadingState {
   isLoaded: boolean
   progress: number
+  /** True when the 3D map could not be loaded/rendered; the page should continue without it */
+  failed?: boolean
 }
 
 interface HelsinkiViewerProps {
@@ -253,6 +255,17 @@ export const HelsinkiViewer = ({
           setStatus('Helsinki 3D - 2km radius')
           onMapLoadingChange?.({ isLoaded: true, progress: 100 })
         },
+        onLoadError: (err) => {
+          // Don't leave the user stuck on the loading screen: report "done" and continue without the map
+          const message = err instanceof Error ? err.message : String(err)
+          setStatus('Error: ' + message)
+          onMapLoadingChange?.({ isLoaded: true, progress: 100, failed: true })
+        },
+        onContextLost: () => {
+          // Mobile browsers reclaim WebGL contexts under memory pressure
+          setStatus('Error: WebGL context lost')
+          onMapLoadingChange?.({ isLoaded: true, progress: 100, failed: true })
+        },
         staticMode,
         environmentColor,
         enableAutoCentering: scrollProgress >= 1,
@@ -289,6 +302,8 @@ export const HelsinkiViewer = ({
       const message = err instanceof Error ? err.message : String(err)
       setStatus('Error: ' + message)
       setLoading(false)
+      // Renderer creation can throw when WebGL is unavailable: let the page continue without the map
+      onMapLoadingChange?.({ isLoaded: true, progress: 100, failed: true })
     }
 
     // Cleanup

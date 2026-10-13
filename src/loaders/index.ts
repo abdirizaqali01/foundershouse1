@@ -8,3 +8,5 @@ export {
   type DualLoadParams,
   type DualLoadResult
 } from './dualModelLoader'
+
+export { createGLTFLoader } from './createGLTFLoader'

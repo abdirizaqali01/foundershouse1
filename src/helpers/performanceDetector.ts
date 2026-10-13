@@ -28,3 +28,28 @@ export function detectPerformanceTier(): PerformanceProfile {
     shadowsEnabled: false // Shadows not used in current experience
   }
 }
+
+export const FULL_MAP_MODEL = '/models/fh.glb'
+export const LITE_MAP_MODEL = '/models/fh-mobile.glb'
+
+/**
+ * Pick which map model to load.
+ * The full model needs ~600 MB of GPU texture memory (480 textures) and 1.4M triangles, which
+ * kills the tab on many phones. The lite model is one 4096px atlas and ~40% of the triangles.
+ *
+ * Desktop (mouse-primary) always gets the full model. Override for testing with
+ * ?model=lite or ?model=full in the URL.
+ */
+export function getMapModelPath(): string {
+  if (typeof window === 'undefined') return FULL_MAP_MODEL
+
+  const override = new URLSearchParams(window.location.search).get('model')
+  if (override === 'lite') return LITE_MAP_MODEL
+  if (override === 'full') return FULL_MAP_MODEL
+
+  const touchPrimary = window.matchMedia?.('(pointer: coarse)').matches ?? false
+  const deviceMemory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory
+  const lowMemory = typeof deviceMemory === 'number' && deviceMemory <= 4
+
+  return touchPrimary || lowMemory ? LITE_MAP_MODEL : FULL_MAP_MODEL
+}

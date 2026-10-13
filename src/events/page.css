@@ -1,40 +1,16 @@
-html.events-cursor,
-body.events-cursor,
-html.events-cursor *,
-body.events-cursor * {
-    user-select: none !important;
-    -webkit-user-select: none !important;
-    -moz-user-select: none !important;
-    -ms-user-select: none !important;
+/* The events page scrolls natively so the Luma calendar can hand scrolling over to the page */
+html.events-scroll {
+    overflow-x: hidden;
+    overflow-y: auto;
+    scrollbar-width: none;
 }
 
-/* Show grabbing cursor when dragging */
-body.events-cursor.events-dragging,
-body.events-cursor.events-dragging * {
-    cursor: grabbing !important;
+html.events-scroll::-webkit-scrollbar {
+    display: none;
 }
 
-body.events-cursor a,
-body.events-cursor a *,
-body.events-cursor button,
-body.events-cursor button *,
-body.events-cursor [role="button"],
-body.events-cursor [role="button"] *,
-body.events-cursor .hamburger-button,
-body.events-cursor .hamburger-button *,
-body.events-cursor .calendar-button,
-body.events-cursor .calendar-button *,
-body.events-cursor .events-calendar-button,
-body.events-cursor .events-calendar-button *,
-body.events-cursor .events-header,
-body.events-cursor .event-card,
-body.events-cursor .event-card-image {
-    cursor: pointer !important;
-}
-
-html.events-cursor.events-cursor-interactive .custom-cursor,
-body.events-cursor.events-cursor-interactive .custom-cursor {
-    opacity: 0;
+body.events-scroll {
+    overflow: visible;
 }
 
 .events-page .stage1-wrapper {
@@ -63,6 +39,22 @@ body.events-cursor.events-cursor-interactive .custom-cursor {
 
 .events-page .stage1-img-container .stage1-img {
     will-change: transform;
+}
+
+/* Fade the hero photo into the page background so the calendar below sits on a clean edge */
+.events-page .stage1-img-container::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to bottom, rgba(43, 9, 6, 0) 55%, #2B0906 100%);
+    opacity: 0;
+    transition: opacity 1.2s ease;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.events-page .stage1-img-container.is-hero::after {
+    opacity: 1;
 }
 
 .events-page .stage1-text-overlay {
@@ -98,25 +90,21 @@ body.events-cursor.events-cursor-interactive .custom-cursor {
 }
 
 .events-page .header-wrapper {
-    position: sticky;
-    width: 100vw;
-    height: 100vh;
-    overflow: hidden;
+    position: relative;
+    width: 100%;
+    padding-top: 24vh;
     z-index: 10;
-    /* pointer-events: none; removed to allow custom cursor everywhere */
 }
 
 .events-page .header-content {
-    position: absolute;
+    position: relative;
     display: flex;
     flex-direction: column;
     width: 92%;
-    height: 70%;
     margin-left: 4%;
     justify-content: flex-start;
     align-items: flex-start;
-    bottom: 5vh;
-    gap: 30%;
+    gap: 5vh;
     pointer-events: none;
 }
 
@@ -135,53 +123,27 @@ body.events-cursor.events-cursor-interactive .custom-cursor {
     transition: font-size 0.3s ease;
 }
 
-/* Smaller font size when displaying event titles on hover */
-.events-page .header-h1-wrapper .header-h1.is-event-title {
-    font-size: 4rem;
-    line-height: 4rem;
-}
-
 .events-page .calendar-button-wrapper {
     margin-bottom: 1vh;
 }
 
-.events-page .header-date-location {
-    font-family: 'IBM Plex Sans', sans-serif;
-    font-size: 2rem;
-    font-weight: 700;
-    color: #FFF8F2;
-    margin: 0;
-    position: absolute;
-    top: 60px;
-    left: 0;
-    letter-spacing: 0.05rem;
-}
-
 .events-page .header-h3-wrapper {
-    width: 35%;
-    display: flex;
-    flex-direction: column;
-    gap: 4vh;
+    width: 100%;
     pointer-events: auto;
 }
 
 .events-page .header-h3-parallax {
-    display: flex;
-    flex-direction: column;
-    gap: 4vh;
     pointer-events: auto;
 }
 
-@media (max-width: 1366px) {
-    .events-page .header-content {
-        margin-top: 8%;
-        gap: 32vh;
-    }
-
-    .events-page .header-h3-wrapper,
-    .events-page .header-h3-parallax {
-        gap: 2.5vh;
-    }
+/* Description on the left, subscribe button on the right */
+.events-page .header-h3-row {
+    display: flex;
+    flex-direction: row-reverse;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 4vw;
+    pointer-events: auto;
 }
 
 .events-page .calendar-button {
@@ -230,6 +192,7 @@ body.events-cursor.events-cursor-interactive .custom-cursor {
     text-transform: uppercase;
     color: #D82E11;
     margin: 0;
+    max-width: 45%;
     text-wrap: balance;
 }
 
@@ -271,176 +234,24 @@ body.events-cursor.events-cursor-interactive .custom-cursor {
 
 
 /*----------------------------------------------*/
-/* Horizontal Scrolling Events Section */
+/* Luma Events Calendar */
 /*----------------------------------------------*/
 
-.events-page .events-scroll-container {
-    position: fixed;
-    bottom: -5vh;
-    left: 0;
-    width: 100vw;
-    height: 70vh;
-    z-index: 2;
-    pointer-events: auto;
-    cursor: none;
-}
-
-/* Gradual blur on left edge of scroll container */
-.events-page .events-scroll-blur {
-    position: absolute;
-    z-index: 10;
-    inset: 0 auto 0 0;
-    width: 200px;
-    height: 100%;
-    pointer-events: none;
-}
-
-.events-page .events-scroll-blur > div,
-.events-page .events-scroll-blur::before {
-    position: absolute;
-    inset: 0;
-}
-
-.events-page .events-scroll-blur::before {
-    content: "";
-    z-index: 1;
-    backdrop-filter: blur(0px);
-    -webkit-backdrop-filter: blur(0px);
-    mask: linear-gradient(to right, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 12.5%, rgba(0,0,0,0) 25%);
-    -webkit-mask-image: linear-gradient(to right, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 12.5%, rgba(0,0,0,0) 25%);
-}
-
-.events-page .events-scroll-blur > div:nth-of-type(1) {
-    z-index: 2;
-    backdrop-filter: blur(2px);
-    -webkit-backdrop-filter: blur(2px);
-    mask: linear-gradient(to right, rgba(0,0,0,1) 12.5%, rgba(0,0,0,1) 25%, rgba(0,0,0,0) 37.5%);
-    -webkit-mask-image: linear-gradient(to right, rgba(0,0,0,1) 12.5%, rgba(0,0,0,1) 25%, rgba(0,0,0,0) 37.5%);
-}
-
-.events-page .events-scroll-blur > div:nth-of-type(2) {
-    z-index: 3;
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
-    mask: linear-gradient(to right, rgba(0,0,0,1) 25%, rgba(0,0,0,1) 37.5%, rgba(0,0,0,0) 50%);
-    -webkit-mask-image: linear-gradient(to right, rgba(0,0,0,1) 25%, rgba(0,0,0,1) 37.5%, rgba(0,0,0,0) 50%);
-}
-
-.events-page .events-scroll-blur > div:nth-of-type(3) {
-    z-index: 4;
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    mask: linear-gradient(to right, rgba(0,0,0,1) 37.5%, rgba(0,0,0,1) 50%, rgba(0,0,0,0) 62.5%);
-    -webkit-mask-image: linear-gradient(to right, rgba(0,0,0,1) 37.5%, rgba(0,0,0,1) 50%, rgba(0,0,0,0) 62.5%);
-}
-
-.events-page .events-scroll-blur > div:nth-of-type(4) {
-    z-index: 5;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    mask: linear-gradient(to right, rgba(0,0,0,1) 50%, rgba(0,0,0,1) 62.5%, rgba(0,0,0,0) 75%);
-    -webkit-mask-image: linear-gradient(to right, rgba(0,0,0,1) 50%, rgba(0,0,0,1) 62.5%, rgba(0,0,0,0) 75%);
-}
-
-.events-page .events-scroll-blur > div:nth-of-type(5) {
-    z-index: 6;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    mask: linear-gradient(to right, rgba(0,0,0,1) 62.5%, rgba(0,0,0,1) 75%, rgba(0,0,0,0) 87.5%);
-    -webkit-mask-image: linear-gradient(to right, rgba(0,0,0,1) 62.5%, rgba(0,0,0,1) 75%, rgba(0,0,0,0) 87.5%);
-}
-
-.events-page .events-scroll-container:active {
-    cursor: none;
-}
-
-.events-page .events-scroll-track {
-    display: flex;
-    gap: 0;
-    padding: 0 2rem 1rem 50vw;
-    height: 100%;
-    width: max-content;
-    align-items: center;
-}
-
-.events-page .event-card {
+.events-page .events-calendar-section {
     position: relative;
-    width: 35vw;
-    height: 21vw;
-    flex-shrink: 0;
-    margin-left: -14vw;
-    padding: 0;
+    width: 92%;
+    margin: 6vh auto 0;
+    padding-bottom: 10vh;
+    z-index: 4;
 }
 
-.events-page .event-card-inner {
+.events-page .events-calendar-frame {
+    display: block;
     width: 100%;
-    height: 100%;
+    height: 80vh;
+    min-height: 560px;
+    border: 1px solid rgba(255, 248, 242, 0.18);
     border-radius: 8px;
-    overflow: hidden;
+    background: #2A292B; /* Luma's dark theme background */
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-    will-change: transform, filter;
-}
-
-/* Dynamic sizing and positioning variations */
-.events-page .event-card:nth-child(1) {
-    margin-top: 0vh;
-}
-
-.events-page .event-card:nth-child(2) {
-    width: 37vw;
-    height: 22vw;
-    margin-top: 15vh;
-}
-
-.events-page .event-card:nth-child(3) {
-    width: 33vw;
-    height: 20vw;
-    margin-top: -8vh;
-}
-
-.events-page .event-card:nth-child(4) {
-    width: 36vw;
-    height: 21.5vw;
-    margin-top: 12vh;
-}
-
-.events-page .event-card:first-child {
-    margin-left: 0;
-}
-
-.events-page .event-card:hover {
-    transform: translateY(-10px) scale(1.03);
-    z-index: 10 !important;
-}
-
-.events-page .event-card-image {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    filter: grayscale(0.4) brightness(0.9);
-    will-change: transform;
-}
-
-/*----------------------------------------------*/
-/* Custom Cursor */
-/*----------------------------------------------*/
-
-.events-page .custom-cursor {
-    position: fixed;
-    pointer-events: none;
-    z-index: 10000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: transform 0.15s ease;
-}
-
-.events-page .custom-cursor.dragging {
-    transform: scale(0.9);
-}
-
-.events-page .cursor-icon {
-    width: 100px;
-    height: auto;
-    transform: translate(0, 0);
 }

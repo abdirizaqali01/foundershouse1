@@ -188,17 +188,22 @@ function AppContent() {
       smoothWheel: true,
       wheelMultiplier: 1,
       touchMultiplier: 0.9,
+      // Required: html/body/#root are overflow:hidden (see index.css), so the browser cannot scroll
+      // natively. Lenis drives ALL scrolling, including touch. Setting this to false breaks touch scroll.
       syncTouch: true,
     })
 
+    let rafId = 0
     function raf(time: number) {
       lenis.raf(time)
-      requestAnimationFrame(raf)
+      rafId = requestAnimationFrame(raf)
     }
 
-    requestAnimationFrame(raf)
+    rafId = requestAnimationFrame(raf)
 
     return () => {
+      // Previously the loop kept running after destroy(), stacking one extra rAF loop per route change
+      cancelAnimationFrame(rafId)
       lenis.destroy()
     }
   }, [location.pathname])

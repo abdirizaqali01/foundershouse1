@@ -35,6 +35,13 @@ const CONFIG = {
   ],
 };
 
+// Phones/tablets/touch: animated CSS blur and backdrop-filter must be re-rasterised every scroll
+// frame on huge, scaled layers, which drops mobile to ~30fps. Skip them there (opacity/transform
+// still animate on the GPU compositor). Desktop keeps the full effect.
+const isLiteFx = (): boolean =>
+  typeof window !== 'undefined' &&
+  (window.innerWidth < 1024 || (window.matchMedia?.('(pointer: coarse)').matches ?? false));
+
 // Element positions: x/y are percentages from center, z affects speed (0=fast, 1=slow)
 // Additional layer: smaller, more transparent decorative blocks
 const FAINT_BLOCKS = [
@@ -131,11 +138,13 @@ function FloatingElement({ type, src, x, y, z, w, h, scrollYProgress, faint = fa
 
   // Blur in sync with opacity - reduced for mobile performance
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  const liteFx = isLiteFx();
   const blur = useTransform(
     scrollYProgress,
     [0, 0.36, 0.54, 0.68],
     isMobile ? [0, 0, 2, 4] : [0, 0, 4, 10]
   );
+  const blurFilter = useTransform(blur, (v) => `blur(${v}px)`);
 
   const spread = positionSpread ?? 1;
 
@@ -152,11 +161,11 @@ function FloatingElement({ type, src, x, y, z, w, h, scrollYProgress, faint = fa
         y: yDrift,
         scale,
         opacity: faint ? 0.3 : opacity,
-        filter: useTransform(blur, (v) => `blur(${v}px)`),
+        ...(liteFx ? {} : { filter: blurFilter }),
         zIndex: Math.round(z * 10),
         translateX: '-50%',
         translateY: '-50%',
-        willChange: 'transform, opacity, filter',
+        willChange: liteFx ? 'transform, opacity' : 'transform, opacity, filter',
       }}
     >
       {type === 'image' ? (
@@ -208,6 +217,8 @@ function HeroText({ scrollYProgress }: { scrollYProgress: MotionValue<number> })
   const opacity = useTransform(scrollYProgress, [0, 0.7, 0.92], [1, 1, 0]);
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
   const blur = useTransform(scrollYProgress, [0, 0.7, 0.92], isMobile ? [0, 0, 8] : [0, 0, 40]);
+  const blurFilter = useTransform(blur, (v) => `blur(${v}px)`);
+  const liteFx = isLiteFx();
   const y = useTransform(scrollYProgress, [0, 1], [0, -32]);
 
   return (
@@ -224,8 +235,8 @@ function HeroText({ scrollYProgress }: { scrollYProgress: MotionValue<number> })
         scale,
         opacity,
         y,
-        filter: useTransform(blur, (v) => `blur(${v}px)`),
-        willChange: 'transform, opacity, filter',
+        ...(liteFx ? {} : { filter: blurFilter }),
+        willChange: liteFx ? 'transform, opacity' : 'transform, opacity, filter',
       }}
     >
       <h1
@@ -384,6 +395,8 @@ function ScrollSection({ isMobileView }: ScrollSectionProps) {
   const slowDownBlur = useTransform(scrollSectionScroll, [0, 0.86, 1], [0, 0, 8]);
   const slowDownRotateX = useTransform(scrollSectionScroll, [0, 0.86, 1], [0, 0, -10]);
   const slowDownFilter = useTransform(slowDownBlur, (v) => `blur(${v}px)`);
+  // Blurring the whole (page-tall) scroll section each frame is very expensive on phones
+  const liteFx = isLiteFx();
 
   const scrollSectionScaleRaw = useTransform(scrollSectionScroll, [0, 0.15], [0.8, 1]);
   const scrollSectionTiltRaw = useTransform(scrollSectionScroll, [0, 0.15], [-40, 0]);
@@ -399,7 +412,7 @@ function ScrollSection({ isMobileView }: ScrollSectionProps) {
       style={{
         y: slowDownY,
         rotateX: slowDownRotateX,
-        filter: slowDownFilter,
+        ...(liteFx ? {} : { filter: slowDownFilter }),
         position: 'relative',
         zIndex: 1
       }}
@@ -838,8 +851,7 @@ return (
                   position: 'absolute',
                   inset: 0,
                   zIndex: 15,
-                  backdropFilter: 'blur(3px)',
-                  WebkitBackdropFilter: 'blur(3px)',
+                  // No backdrop-filter: it re-blurs everything beneath it on every scroll frame.
                   background: 'rgba(80, 10, 12, 0.6)',
                   pointerEvents: 'none',
                 }}
